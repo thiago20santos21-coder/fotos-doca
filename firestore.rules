@@ -1,0 +1,12 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /fotos/{foto} {
+      allow read: if true;
+      allow create: if request.resource.data.dockNumber is string
+                    && request.resource.data.dockNumber.size() > 0
+                    && request.resource.data.url is string;
+      allow delete, update: if false;
+    }
+  }
+}
