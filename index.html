@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#0f3460">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Fotos Doca">
+<meta name="description" content="Sistema de registro de fotos por número de doca">
+<title>Fotos Doca</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="style.css">
+<link rel="apple-touch-icon" href="icons/icon.svg">
+</head>
+<body>
+
+<!-- ── HEADER ─────────────────────────────────── -->
+<header class="header">
+  <div class="header-inner">
+    <svg class="logo" width="34" height="34" viewBox="0 0 192 192">
+      <rect width="192" height="192" rx="36" fill="#e94560"/>
+      <path d="M44 72h24l14-20h28l14 20h24v68H44V72z" fill="none" stroke="white" stroke-width="10" stroke-linejoin="round"/>
+      <circle cx="96" cy="106" r="26" fill="none" stroke="white" stroke-width="10"/>
+      <circle cx="96" cy="106" r="11" fill="white"/>
+      <rect x="52" y="82" width="14" height="9" rx="3" fill="white" opacity="0.7"/>
+    </svg>
+    <h1>Fotos Doca</h1>
+    <div class="conn-badge" id="connBadge">
+      <span class="dot"></span>
+      <span id="connLabel">Conectado</span>
+    </div>
+  </div>
+</header>
+
+<!-- ── INSTALL BANNER ─────────────────────────── -->
+<div class="install-bar" id="installBar" style="display:none">
+  <span>📱 Instale o app no seu celular!</span>
+  <button id="installBtn">Instalar</button>
+  <button class="x-btn" id="closeBar">✕</button>
+</div>
+
+<!-- ── SETUP NOTICE (hidden when Firebase OK) ─── -->
+<div class="setup-notice" id="setupNotice" style="display:none">
+  <strong>⚙️ Firebase não configurado — modo local ativo</strong>
+  As fotos são salvas apenas neste dispositivo. Para sincronizar entre usuários:
+  <ol>
+    <li>Acesse <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a> e crie um projeto</li>
+    <li>Ative <strong>Firestore Database</strong> e <strong>Storage</strong></li>
+    <li>Em <em>Configurações → Seus apps → Web</em>, copie o objeto de configuração</li>
+    <li>Abra <code>app.js</code> e substitua os valores em <code>FIREBASE_CONFIG</code></li>
+  </ol>
+</div>
+
+<!-- ── MAIN ───────────────────────────────────── -->
+<main class="main">
+
+  <!-- CÂMERA / NOVA FOTO -->
+  <section class="card">
+    <h2>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+        <circle cx="12" cy="13" r="4"/>
+      </svg>
+      Nova Foto
+    </h2>
+
+    <!-- Preview -->
+    <div class="preview-wrap" id="previewWrap">
+      <div class="preview-ph" id="previewPh">
+        <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="#0f3460" stroke-width="1.5">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        <p>Nenhuma foto selecionada</p>
+        <small>Use os botões abaixo</small>
+      </div>
+      <img id="photoPreview" alt="Preview da foto">
+      <button class="rm-btn" id="rmBtn" title="Remover foto">✕</button>
+    </div>
+
+    <!-- Inputs escondidos -->
+    <input type="file" id="camInput" accept="image/*" capture="environment" style="display:none">
+    <input type="file" id="galInput" accept="image/*" style="display:none">
+
+    <!-- Botões câmera/galeria -->
+    <div class="cam-btns">
+      <button class="btn btn-primary" id="openCam">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        Câmera
+      </button>
+      <button class="btn btn-secondary" id="openGal">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        Galeria
+      </button>
+    </div>
+
+    <!-- Número da Doca -->
+    <div class="dock-section" style="margin-bottom:6px">
+      <label for="dockInput">Número da Doca *</label>
+      <div class="input-wrap">
+        <svg class="input-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <rect x="2" y="7" width="20" height="14" rx="2"/>
+          <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+        </svg>
+        <input class="text-input" type="text" id="dockInput" placeholder="Ex: DOCA-01, A12, 205…" autocomplete="off">
+      </div>
+    </div>
+
+    <!-- Salvar -->
+    <button class="btn btn-save" id="saveBtn" disabled>
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+        <polyline points="17 21 17 13 7 13 7 21"/>
+        <polyline points="7 3 7 8 15 8"/>
+      </svg>
+      Salvar Foto
+    </button>
+
+    <!-- Progresso -->
+    <div class="progress-wrap" id="progressWrap" style="display:none">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <p class="progress-label" id="progressLbl">Salvando...</p>
+    </div>
+  </section>
+
+  <!-- GALERIA -->
+  <section class="gallery-section">
+    <div class="gallery-head">
+      <h2>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="14" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        Fotos Registradas
+      </h2>
+      <div class="gallery-controls">
+        <input type="search" class="search-input" id="searchInput" placeholder="Buscar por doca…">
+        <span class="count-badge" id="countBadge">0 fotos</span>
+      </div>
+    </div>
+
+    <div class="loading" id="galleryLoad">
+      <div class="spinner"></div>
+      <p>Carregando fotos…</p>
+    </div>
+
+    <div class="empty" id="emptyState" style="display:none">
+      <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+        <circle cx="12" cy="13" r="4"/>
+      </svg>
+      <p>Nenhuma foto registrada ainda.<br>Tire a primeira foto acima!</p>
+    </div>
+
+    <div class="photo-grid" id="photoGrid"></div>
+  </section>
+</main>
+
+<!-- ── MODAL ──────────────────────────────────── -->
+<div class="modal" id="modal" style="display:none" role="dialog" aria-modal="true">
+  <div class="modal-bg" id="modalBg"></div>
+  <div class="modal-box">
+    <button class="modal-close" id="modalClose" aria-label="Fechar">✕</button>
+    <div class="modal-img-wrap">
+      <img id="modalImg" alt="Foto da doca">
+    </div>
+    <div class="modal-meta">
+      <div class="modal-dock" id="modalDock"></div>
+      <div class="modal-info-row" id="modalDate"></div>
+      <button class="btn btn-download" id="modalDlBtn">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Baixar Foto
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CÂMERA AO VIVO ──────────────────────── -->
+<div class="cam-modal" id="camModal" style="display:none" role="dialog" aria-modal="true">
+  <div class="cam-header">
+    <button class="cam-cancel" id="camCancel">✕ Cancelar</button>
+    <span class="cam-title">Câmera</span>
+    <button class="cam-toggle" id="camToggle" title="Virar câmera">🔄</button>
+  </div>
+  <div class="cam-video-wrap">
+    <video id="camVideo" autoplay playsinline muted></video>
+    <div class="cam-frame"></div>
+  </div>
+  <div class="cam-footer">
+    <button class="shutter-btn" id="captureBtn" aria-label="Tirar foto">
+      <span class="shutter-inner"></span>
+    </button>
+  </div>
+</div>
+
+<!-- ── TOAST ──────────────────────────────────── -->
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
