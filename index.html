@@ -85,6 +85,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .srch{flex:1;padding:10px 13px;border:2px solid var(--bdr);border-radius:var(--rs);font-size:.88rem;color:var(--txt);font-family:inherit;transition:border-color .2s}
 .srch:focus{outline:none;border-color:var(--pri)}
 .cnt{font-size:.76rem;color:var(--txt3);white-space:nowrap;background:#f0f4f8;padding:6px 11px;border-radius:99px}
+.btn-del-all{display:flex;align-items:center;gap:5px;background:#fde8ec;color:var(--acc);border:1.5px solid #f5c6cf;padding:7px 11px;border-radius:var(--rs);cursor:pointer;font-size:.76rem;font-weight:600;white-space:nowrap;transition:background .15s,color .15s;font-family:inherit}
+.btn-del-all:hover{background:var(--acc);color:#fff}
+.btn-del-all:disabled{opacity:.4;cursor:not-allowed}
 
 /* STATES */
 .loading,.empty{display:flex;flex-direction:column;align-items:center;padding:38px;gap:13px;color:var(--txt3);font-size:.88rem;text-align:center}
@@ -283,6 +286,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       <div class="gal-ctrl">
         <input type="search" class="srch" id="searchInput" placeholder="Buscar por doca…">
         <span class="cnt" id="cntBadge">0 fotos</span>
+        <button class="btn-del-all" id="delAllBtn" title="Apagar todas as fotos">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+          </svg>
+          Apagar tudo
+        </button>
       </div>
     </div>
 
@@ -429,7 +439,7 @@ const photoPreview=$('photoPreview'),previewPh=$('previewPh'),rmBtn=$('rmBtn');
 const dockInput=$('dockInput'),saveBtn=$('saveBtn');
 const progWrap=$('progWrap'),progFill=$('progFill'),progLbl=$('progLbl');
 const photoGrid=$('photoGrid'),galLoad=$('galLoad'),emptyState=$('emptyState'),cntBadge=$('cntBadge');
-const searchInput=$('searchInput');
+const searchInput=$('searchInput'),delAllBtn=$('delAllBtn');
 const modal=$('modal'),modalBg=$('modalBg'),modalClose=$('modalClose');
 const modalImg=$('modalImg'),modalDock=$('modalDock'),modalDate=$('modalDate');
 const modalDlBtn=$('modalDlBtn'),modalEditBtn=$('modalEditBtn'),modalDelBtn=$('modalDelBtn');
@@ -500,7 +510,7 @@ function checkSave(){saveBtn.disabled=!(currentPhoto&&dockInput.value.trim());}
 
 saveBtn.addEventListener('click',async()=>{
   if(!currentPhoto||!dockInput.value.trim())return;
-  const dock=dockInput.value.trim().toUpperCase().replace(/\s+/g,'-');
+  const dock=dockInput.value.trim();
   const now=new Date(),pad=n=>String(n).padStart(2,'0');
   const stamp=`${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
   saveBtn.disabled=true; progWrap.style.display='block';
@@ -524,6 +534,7 @@ function render(){
   const q=searchInput.value.trim().toLowerCase();
   const list=q?allPhotos.filter(p=>p.dockNumber.toLowerCase().includes(q)||p.fileName.toLowerCase().includes(q)):allPhotos;
   cntBadge.textContent=`${list.length} foto${list.length!==1?'s':''}`;
+  delAllBtn.disabled=!allPhotos.length;
   if(!list.length){photoGrid.innerHTML='';emptyState.style.display='flex';return;}
   emptyState.style.display='none';
   photoGrid.innerHTML=list.map(p=>{
@@ -625,7 +636,7 @@ editClose.addEventListener('click',closeEditModal);
 editBg.addEventListener('click',closeEditModal);
 editSaveBtn.addEventListener('click',async()=>{
   if(!editingPhoto||!editDockInput.value.trim())return;
-  const newDock=editDockInput.value.trim().toUpperCase().replace(/\s+/g,'-');
+  const newDock=editDockInput.value.trim();
   const updated={...editingPhoto,dockNumber:newDock,fileName:`DOCA-${newDock}_${new Date(editingPhoto.timestamp).toISOString().replace(/[-T:.Z]/g,'').slice(0,15)}.jpg`};
   editSaveBtn.disabled=true;
   try{
@@ -685,6 +696,23 @@ function toast2(msg,type='info'){
   toast.textContent=msg; toast.className=`toast show ${type}`;
   clearTimeout(tt); tt=setTimeout(()=>{toast.className='toast';},3000);
 }
+
+// ── Apagar tudo ──────────────────────────────────────
+delAllBtn.addEventListener('click',async()=>{
+  if(!allPhotos.length)return;
+  if(!confirm(`Apagar todas as ${allPhotos.length} foto${allPhotos.length!==1?'s':''}? Isso não pode ser desfeito.`))return;
+  delAllBtn.disabled=true;
+  try{
+    const db=await openDB();
+    await new Promise((res,rej)=>{
+      const r=db.transaction(ST,'readwrite').objectStore(ST).clear();
+      r.onsuccess=res; r.onerror=e=>rej(e.target.error);
+    });
+    await loadPhotos();
+    toast2('Todas as fotos apagadas!','ok');
+  }catch(e){toast2('Erro: '+e.message,'err');}
+  delAllBtn.disabled=false;
+});
 
 // ── Init ─────────────────────────────────────────────
 loadPhotos();
