@@ -1,29 +1,44 @@
-const FIREBASE_CONFIG = {
-    apiKey:            "AIzaSyC0k4gsBJiIDVvmIr9UwIYtSkKrJp6YTbk",
-    authDomain:        "painel-ml-logistica.firebaseapp.com",
-    projectId:         "painel-ml-logistica",
-    storageBucket:     "painel-ml-logistica.firebasestorage.app",
-    messagingSenderId: "814809332914",
-    appId:             "1:814809332914:web:bc8d48e9bf919b84105dab"
-};
+// ── IndexedDB ──────────────────────────────────────────
+const DB_NAME    = 'fotos-doca';
+const DB_VERSION = 1;
+const STORE      = 'fotos';
 
-import { initializeApp }                                   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getFirestore, collection, addDoc, onSnapshot,
-         query, orderBy, serverTimestamp }                  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
-import { getStorage, ref, uploadBytesResumable,
-         getDownloadURL }                                   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js';
+function openDB() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = e => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE)) {
+                const store = db.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true });
+                store.createIndex('timestamp', 'timestamp');
+            }
+        };
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror   = e => reject(e.target.error);
+    });
+}
 
-// ── Firebase init ──────────────────────────────────────
-let db, storage, FIREBASE_OK = false;
-const configured = !FIREBASE_CONFIG.apiKey.startsWith('COLE');
+async function dbSave(data) {
+    const db    = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx    = db.transaction(STORE, 'readwrite');
+        const store = tx.objectStore(STORE);
+        const req   = store.add(data);
+        req.onsuccess = e => resolve(e.target.result);
+        req.onerror   = e => reject(e.target.error);
+    });
+}
 
-if (configured) {
-    try {
-        const app = initializeApp(FIREBASE_CONFIG);
-        db       = getFirestore(app);
-        storage  = getStorage(app);
-        FIREBASE_OK = true;
-    } catch(e) { console.warn('Firebase init error:', e); }
+async function dbGetAll() {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const tx    = db.transaction(STORE, 'readonly');
+        const store = tx.objectStore(STORE);
+        const index = store.index('timestamp');
+        const req   = index.getAll();
+        req.onsuccess = e => resolve(e.target.result.reverse());
+        req.onerror   = e => reject(e.target.error);
+    });
 }
 
 // ── DOM refs ───────────────────────────────────────────
@@ -53,7 +68,6 @@ const modalDlBtn   = $('modalDlBtn');
 const installBar   = $('installBar');
 const installBtn   = $('installBtn');
 const closeBar     = $('closeBar');
-const setupNotice  = $('setupNotice');
 const toast        = $('toast');
 const previewWrap  = $('previewWrap');
 const camModal     = $('camModal');
@@ -63,54 +77,41 @@ const camToggle    = $('camToggle');
 const captureBtn   = $('captureBtn');
 
 // ── State ──────────────────────────────────────────────
-let currentPhoto  = null;
-let allPhotos     = [];
-let modalPhoto    = null;
-let deferredPWA   = null;
-let cameraStream  = null;
-let facingMode    = 'environment'; // 'environment' = traseira, 'user' = frontal
+let currentPhoto = null;
+let allPhotos    = [];
+let modalPhoto   = null;
+let deferredPWA  = null;
+let cameraStream = null;
+let facingMode   = 'environment';
 
-// ── Setup notice ───────────────────────────────────────
-if (!configured && setupNotice) setupNotice.style.display = 'block';
-
-// ── Camera ao vivo (getUserMedia) ──────────────────────
+// ── Câmera ao vivo ─────────────────────────────────────
 $('openCam').addEventListener('click', openCamera);
 $('openGal').addEventListener('click', () => galInput.click());
-
 galInput.addEventListener('change', onFileChosen);
 
 async function openCamera() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        // Fallback para dispositivos sem suporte à API
-        camInput.click();
-        return;
-    }
+    if (!navigator.mediaDevices?.getUserMedia) { camInput.click(); return; }
     try {
-        const constraints = {
-            video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
-            audio: false
-        };
         try {
-            cameraStream = await navigator.mediaDevices.getUserMedia(constraints);
+            cameraStream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode, width: { ideal: 1920 }, height: { ideal: 1080 } },
+                audio: false
+            });
         } catch {
-            // Câmera traseira não disponível (desktop) — tenta qualquer câmera
             cameraStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
         }
         camVideo.srcObject = cameraStream;
-        // Espelha câmera frontal para parecer natural
         camVideo.style.setProperty('--mirror', facingMode === 'user' ? '-1' : '1');
         camModal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
     } catch(e) {
-        showToast('Câmera bloqueada. Verifique as permissões do navegador.', 'err');
+        showToast('Câmera bloqueada. Verifique as permissões.', 'err');
     }
 }
 
 function closeCamera() {
-    if (cameraStream) {
-        cameraStream.getTracks().forEach(t => t.stop());
-        cameraStream = null;
-    }
+    cameraStream?.getTracks().forEach(t => t.stop());
+    cameraStream = null;
     camVideo.srcObject = null;
     camModal.style.display = 'none';
     document.body.style.overflow = '';
@@ -130,18 +131,14 @@ captureBtn.addEventListener('click', () => {
     canvas.width  = camVideo.videoWidth;
     canvas.height = camVideo.videoHeight;
     const ctx = canvas.getContext('2d');
-    // Aplica espelhamento no canvas se for câmera frontal
-    if (facingMode === 'user') {
-        ctx.translate(canvas.width, 0);
-        ctx.scale(-1, 1);
-    }
+    if (facingMode === 'user') { ctx.translate(canvas.width, 0); ctx.scale(-1, 1); }
     ctx.drawImage(camVideo, 0, 0);
     canvas.toBlob(blob => {
-        const file   = new File([blob], 'camera.jpg', { type: 'image/jpeg' });
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+        const file    = new File([blob], 'camera.jpg', { type: 'image/jpeg' });
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
         setCurrentPhoto({ file, dataUrl });
         closeCamera();
-    }, 'image/jpeg', 0.92);
+    }, 'image/jpeg', 0.85);
 });
 
 function setCurrentPhoto(photo) {
@@ -180,63 +177,40 @@ function checkSave() {
     saveBtn.disabled = !(currentPhoto && dockInput.value.trim());
 }
 
-// ── Save photo ─────────────────────────────────────────
+// ── Salvar foto ────────────────────────────────────────
 saveBtn.addEventListener('click', savePhoto);
 
 async function savePhoto() {
     if (!currentPhoto || !dockInput.value.trim()) return;
 
-    const dock = dockInput.value.trim().toUpperCase().replace(/\s+/g,'-');
-    const now  = new Date();
-    const pad  = n => String(n).padStart(2,'0');
+    const dock  = dockInput.value.trim().toUpperCase().replace(/\s+/g, '-');
+    const now   = new Date();
+    const pad   = n => String(n).padStart(2, '0');
     const stamp = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
     const fileName = `DOCA-${dock}_${stamp}.jpg`;
 
     saveBtn.disabled = true;
     progressWrap.style.display = 'block';
-    setProgress(5, 'Iniciando...');
-
-    if (!FIREBASE_OK) {
-        await saveLocal(dock, fileName, now);
-        return;
-    }
+    setProgress(30, 'Salvando...');
 
     try {
-        const blob = await (await fetch(currentPhoto.dataUrl)).blob();
-        const stRef = ref(storage, `fotos-doca/${fileName}`);
-        const task  = uploadBytesResumable(stRef, blob, { contentType: 'image/jpeg' });
-
-        task.on('state_changed',
-            snap => setProgress(Math.round(snap.bytesTransferred / snap.totalBytes * 85), `Enviando... ${Math.round(snap.bytesTransferred/snap.totalBytes*100)}%`),
-            err  => { showToast('Erro no upload: ' + err.message, 'err'); resetSaveUI(); },
-            async () => {
-                setProgress(92, 'Salvando dados...');
-                const url = await getDownloadURL(task.snapshot.ref);
-                await addDoc(collection(db, 'fotos'), {
-                    dockNumber: dock,
-                    fileName,
-                    url,
-                    timestamp: serverTimestamp(),
-                    device: /Mobi/.test(navigator.userAgent) ? 'mobile' : 'desktop'
-                });
-                setProgress(100, 'Salvo!');
-                setTimeout(() => { resetSaveUI(); resetForm(); showToast('Foto salva!', 'ok'); }, 700);
-            }
-        );
+        await dbSave({
+            dockNumber: dock,
+            fileName,
+            url:       currentPhoto.dataUrl,
+            timestamp: now.getTime()
+        });
+        setProgress(100, 'Salvo!');
+        setTimeout(() => {
+            resetSaveUI();
+            resetForm();
+            loadPhotos();
+            showToast('Foto salva!', 'ok');
+        }, 500);
     } catch(e) {
-        showToast('Erro: ' + e.message, 'err');
+        showToast('Erro ao salvar: ' + e.message, 'err');
         resetSaveUI();
     }
-}
-
-async function saveLocal(dock, fileName, now) {
-    setProgress(40, 'Salvando...');
-    const photos = JSON.parse(localStorage.getItem('dock-photos') || '[]');
-    photos.unshift({ id: Date.now().toString(), dockNumber: dock, fileName, url: currentPhoto.dataUrl, timestamp: now.toISOString(), device: 'local' });
-    if (photos.length > 60) photos.length = 60;
-    localStorage.setItem('dock-photos', JSON.stringify(photos));
-    setProgress(100, 'Salvo!');
-    setTimeout(() => { resetSaveUI(); resetForm(); loadLocalPhotos(); showToast('Foto salva localmente!', 'ok'); }, 600);
 }
 
 function setProgress(pct, label) {
@@ -254,35 +228,23 @@ function resetForm() {
     dockInput.value = '';
 }
 
-// ── Load photos ────────────────────────────────────────
-function loadPhotos() {
-    if (FIREBASE_OK) {
-        const q = query(collection(db, 'fotos'), orderBy('timestamp', 'desc'));
-        onSnapshot(q, snap => {
-            allPhotos = snap.docs.map(d => ({ id: d.id, ...d.data(), timestamp: d.data().timestamp?.toDate() || new Date() }));
-            galleryLoad.style.display = 'none';
-            renderGallery();
-        }, err => {
-            console.warn('Firestore error:', err);
-            galleryLoad.style.display = 'none';
-            loadLocalPhotos();
-        });
-    } else {
-        loadLocalPhotos();
+// ── Carregar fotos ─────────────────────────────────────
+async function loadPhotos() {
+    try {
+        allPhotos = await dbGetAll();
+    } catch(e) {
+        allPhotos = [];
     }
-}
-
-function loadLocalPhotos() {
-    allPhotos = JSON.parse(localStorage.getItem('dock-photos') || '[]')
-        .map(p => ({ ...p, timestamp: new Date(p.timestamp) }));
     galleryLoad.style.display = 'none';
     renderGallery();
 }
 
-// ── Render gallery ─────────────────────────────────────
+// ── Renderizar galeria ─────────────────────────────────
 function renderGallery() {
-    const q = searchInput.value.trim().toLowerCase();
-    const list = q ? allPhotos.filter(p => p.dockNumber.toLowerCase().includes(q) || p.fileName.toLowerCase().includes(q)) : allPhotos;
+    const q    = searchInput.value.trim().toLowerCase();
+    const list = q ? allPhotos.filter(p =>
+        p.dockNumber.toLowerCase().includes(q) || p.fileName.toLowerCase().includes(q)
+    ) : allPhotos;
 
     countBadge.textContent = `${list.length} foto${list.length !== 1 ? 's' : ''}`;
 
@@ -294,7 +256,7 @@ function renderGallery() {
     emptyState.style.display = 'none';
 
     photoGrid.innerHTML = list.map(p => {
-        const d = p.timestamp instanceof Date ? p.timestamp : new Date(p.timestamp);
+        const d  = new Date(p.timestamp);
         const ds = d.toLocaleDateString('pt-BR');
         const ts = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         return `
@@ -322,23 +284,21 @@ function renderGallery() {
         el.addEventListener('click', () => openModal(el.dataset.id))
     );
     photoGrid.querySelectorAll('.dl-btn').forEach(el =>
-        el.addEventListener('click', ev => { ev.stopPropagation(); downloadPhoto(getPhoto(el.dataset.id)); })
+        el.addEventListener('click', ev => { ev.stopPropagation(); downloadPhoto(getPhoto(Number(el.dataset.id))); })
     );
 }
 
 function getPhoto(id) { return allPhotos.find(p => p.id === id); }
-
 searchInput.addEventListener('input', renderGallery);
 
 // ── Modal ──────────────────────────────────────────────
 function openModal(id) {
-    const p = getPhoto(id);
+    const p = getPhoto(Number(id));
     if (!p) return;
     modalPhoto = p;
     modalImg.src = p.url;
     modalDock.textContent = `Doca: ${p.dockNumber}`;
-    const d = p.timestamp instanceof Date ? p.timestamp : new Date(p.timestamp);
-    modalDate.textContent = d.toLocaleString('pt-BR');
+    modalDate.textContent = new Date(p.timestamp).toLocaleString('pt-BR');
     modal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
 }
@@ -354,25 +314,14 @@ document.addEventListener('keydown', e => e.key === 'Escape' && closeModal());
 modalDlBtn.addEventListener('click', () => modalPhoto && downloadPhoto(modalPhoto));
 
 // ── Download ───────────────────────────────────────────
-async function downloadPhoto(p) {
+function downloadPhoto(p) {
     if (!p) return;
-    const name = p.fileName || `DOCA-${p.dockNumber}.jpg`;
-    showToast('Baixando...', 'info');
-    try {
-        const res  = await fetch(p.url);
-        const blob = await res.blob();
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href = url; a.download = name;
-        document.body.appendChild(a); a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    } catch {
-        const a = document.createElement('a');
-        a.href = p.url; a.download = name;
-        document.body.appendChild(a); a.click();
-        document.body.removeChild(a);
-    }
+    const a      = document.createElement('a');
+    a.href       = p.url;
+    a.download   = p.fileName || `DOCA-${p.dockNumber}.jpg`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
     showToast('Download concluído!', 'ok');
 }
 
@@ -409,7 +358,6 @@ if ('serviceWorker' in navigator) {
 // ── Boot ───────────────────────────────────────────────
 loadPhotos();
 
-// Open camera if started via shortcut
 if (new URLSearchParams(location.search).get('action') === 'camera') {
-    setTimeout(() => camInput.click(), 400);
+    setTimeout(() => $('openCam').click(), 400);
 }
