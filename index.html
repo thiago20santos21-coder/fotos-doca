@@ -153,8 +153,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .cam-title{color:#fff;font-weight:600;font-size:.9rem}
 .cam-flip{color:#fff;background:rgba(255,255,255,.18);border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center}
 .cam-vwrap{flex:1;position:relative;overflow:hidden}
-#camVideo{width:100%;height:100%;object-fit:cover;display:block;transform:scaleX(var(--mirror,1))}
-.cam-ftr{position:absolute;bottom:0;left:0;right:0;padding:26px 24px 34px;display:flex;align-items:center;justify-content:center;background:linear-gradient(to top,rgba(0,0,0,.7),transparent)}
+#camVideo{width:100%;height:100%;object-fit:cover;display:block;transform-origin:center center}
+.cam-ftr{position:absolute;bottom:0;left:0;right:0;padding:16px 24px 34px;display:flex;flex-direction:column;align-items:center;gap:14px;background:linear-gradient(to top,rgba(0,0,0,.72),transparent)}
+.zoom-ctrl{display:flex;align-items:center;gap:10px;width:100%;max-width:300px}
+.zoom-btn{color:#fff;background:rgba(255,255,255,.22);border:none;width:34px;height:34px;border-radius:50%;font-size:1.2rem;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;user-select:none}
+.zoom-btn:active{background:rgba(255,255,255,.5)}
+.zoom-slider{flex:1;height:4px;cursor:pointer;-webkit-appearance:none;appearance:none;background:rgba(255,255,255,.3);border-radius:99px;outline:none}
+.zoom-slider::-webkit-slider-thumb{-webkit-appearance:none;width:22px;height:22px;border-radius:50%;background:#fff;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.zoom-slider::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:#fff;cursor:pointer;border:none;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.zoom-lbl{color:#fff;font-size:.82rem;font-weight:700;min-width:34px;text-align:center}
 .shutter{width:74px;height:74px;border-radius:50%;border:4px solid #fff;background:rgba(255,255,255,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .1s,background .12s}
 .shutter:active{transform:scale(.88);background:rgba(255,255,255,.55)}
 .shutter-in{width:52px;height:52px;border-radius:50%;background:#fff;pointer-events:none}
@@ -379,6 +386,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   </div>
   <div class="cam-vwrap"><video id="camVideo" autoplay playsinline muted></video></div>
   <div class="cam-ftr">
+    <div class="zoom-ctrl">
+      <button class="zoom-btn" id="zoomOut">−</button>
+      <input class="zoom-slider" type="range" id="zoomSlider" min="1" max="5" step="0.1" value="1">
+      <button class="zoom-btn" id="zoomIn">+</button>
+      <span class="zoom-lbl" id="zoomLbl">1×</span>
+    </div>
     <button class="shutter" id="captureBtn"><span class="shutter-in"></span></button>
   </div>
 </div>
@@ -448,10 +461,13 @@ const editPreview=$('editPreview'),editDockInput=$('editDockInput'),editSaveBtn=
 const installBar=$('installBar'),installBtn=$('installBtn'),closeBar=$('closeBar');
 const toast=$('toast'),previewWrap=$('previewWrap');
 const camModal=$('camModal'),camVideo=$('camVideo'),camCancel=$('camCancel'),camFlip=$('camFlip'),captureBtn=$('captureBtn');
+const zoomSlider=$('zoomSlider'),zoomLbl=$('zoomLbl'),zoomOut=$('zoomOut'),zoomIn=$('zoomIn');
 
 // ── State ────────────────────────────────────────────
 let currentPhoto=null,allPhotos=[],modalPhoto=null,editingPhoto=null;
 let deferredPWA=null,cameraStream=null,facingMode='environment';
+let currentZoom=1,zoomHardware=false,zoomCapMin=1,zoomCapMax=5;
+let pinchDist0=0,pinchZoom0=1;
 
 // ── Câmera ───────────────────────────────────────────
 $('openCam').addEventListener('click',openCamera);
@@ -464,24 +480,65 @@ async function openCamera(){
     try{cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode,width:{ideal:1920},height:{ideal:1080}},audio:false});}
     catch{cameraStream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});}
     camVideo.srcObject=cameraStream;
-    camVideo.style.setProperty('--mirror',facingMode==='user'?'-1':'1');
+    // detect hardware zoom capability
+    const track=cameraStream.getVideoTracks()[0];
+    const caps=track.getCapabilities?.();
+    if(caps?.zoom){
+      zoomHardware=true; zoomCapMin=caps.zoom.min; zoomCapMax=caps.zoom.max;
+      zoomSlider.step=caps.zoom.step||0.1;
+    } else {
+      zoomHardware=false; zoomCapMin=1; zoomCapMax=5; zoomSlider.step=0.1;
+    }
+    zoomSlider.min=zoomCapMin; zoomSlider.max=zoomCapMax;
+    applyZoom(zoomCapMin);
     camModal.style.display='flex'; document.body.style.overflow='hidden';
   }catch(e){toast2('Câmera bloqueada. Verifique as permissões.','err');}
 }
+function applyZoom(z){
+  currentZoom=Math.max(zoomCapMin,Math.min(zoomCapMax,+z||1));
+  zoomSlider.value=currentZoom;
+  zoomLbl.textContent=currentZoom.toFixed(1).replace(/\.0$/,'')+'×';
+  if(zoomHardware){
+    cameraStream?.getVideoTracks()[0]?.applyConstraints({advanced:[{zoom:currentZoom}]});
+    camVideo.style.transform=facingMode==='user'?'scaleX(-1)':'none';
+  } else {
+    camVideo.style.transform=facingMode==='user'?`scale(${currentZoom}) scaleX(-1)`:`scale(${currentZoom})`;
+  }
+}
 function closeCamera(){
   cameraStream?.getTracks().forEach(t=>t.stop());
-  cameraStream=null; camVideo.srcObject=null;
+  cameraStream=null; camVideo.srcObject=null; camVideo.style.transform='none';
   camModal.style.display='none'; document.body.style.overflow='';
 }
 camCancel.addEventListener('click',closeCamera);
 camFlip.addEventListener('click',async()=>{facingMode=facingMode==='environment'?'user':'environment';closeCamera();await openCamera();});
+
+// zoom controls
+zoomSlider.addEventListener('input',()=>applyZoom(zoomSlider.value));
+zoomOut.addEventListener('click',()=>applyZoom(currentZoom-(zoomCapMax-zoomCapMin)/10));
+zoomIn.addEventListener('click',()=>applyZoom(currentZoom+(zoomCapMax-zoomCapMin)/10));
+
+// pinch-to-zoom (touch)
+const camVwrap=document.querySelector('.cam-vwrap');
+camVwrap.addEventListener('touchstart',e=>{if(e.touches.length===2){e.preventDefault();pinchDist0=Math.hypot(e.touches[1].clientX-e.touches[0].clientX,e.touches[1].clientY-e.touches[0].clientY);pinchZoom0=currentZoom;}},{passive:false});
+camVwrap.addEventListener('touchmove',e=>{if(e.touches.length===2){e.preventDefault();const d=Math.hypot(e.touches[1].clientX-e.touches[0].clientX,e.touches[1].clientY-e.touches[0].clientY);applyZoom(pinchZoom0*d/pinchDist0);}},{passive:false});
+
+// scroll wheel zoom (desktop)
+camVwrap.addEventListener('wheel',e=>{e.preventDefault();applyZoom(currentZoom+(e.deltaY<0?0.2:-0.2));},{passive:false});
+
 captureBtn.addEventListener('click',()=>{
   if(!camVideo.videoWidth)return;
   const c=document.createElement('canvas');
   c.width=camVideo.videoWidth; c.height=camVideo.videoHeight;
   const ctx=c.getContext('2d');
   if(facingMode==='user'){ctx.translate(c.width,0);ctx.scale(-1,1);}
-  ctx.drawImage(camVideo,0,0);
+  if(!zoomHardware&&currentZoom>1){
+    // crop center to match what's visible on screen
+    const sw=c.width/currentZoom, sh=c.height/currentZoom;
+    ctx.drawImage(camVideo,(c.width-sw)/2,(c.height-sh)/2,sw,sh,0,0,c.width,c.height);
+  } else {
+    ctx.drawImage(camVideo,0,0);
+  }
   c.toBlob(blob=>{setPhoto({file:new File([blob],'camera.jpg',{type:'image/jpeg'}),dataUrl:c.toDataURL('image/jpeg',.85)});closeCamera();},'image/jpeg',.85);
 });
 
