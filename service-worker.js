@@ -1,4 +1,4 @@
-const CACHE = 'fotos-doca-v2';
+const CACHE = 'fotos-doca-v3';
 const ASSETS = ['./index.html', './style.css', './app.js', './manifest.json'];
 
 self.addEventListener('install', e => {

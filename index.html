@@ -30,13 +30,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 .dl-app-btn{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;padding:7px 12px;border-radius:8px;cursor:pointer;font-size:.78rem;font-weight:600;white-space:nowrap;transition:background .18s}
 .dl-app-btn:hover{background:rgba(255,255,255,.28)}
-.dl-app-btn svg{flex-shrink:0}
 
-/* INSTALL BANNER */
+/* INSTALL */
 .inst-bar{background:linear-gradient(90deg,#1a1a2e,var(--pri-bg));color:#fff;padding:10px 16px;display:flex;align-items:center;gap:10px;font-size:.85rem}
 .inst-bar span{flex:1}
-.inst-bar button{background:var(--acc);color:#fff;border:none;padding:7px 14px;border-radius:8px;cursor:pointer;font-weight:600;font-size:.82rem;white-space:nowrap}
-.inst-bar .xb{background:transparent!important;padding:4px 8px!important;opacity:.7;font-size:1rem}
+.inst-bar button{background:var(--acc);color:#fff;border:none;padding:7px 14px;border-radius:8px;cursor:pointer;font-weight:600;font-size:.82rem}
+.inst-bar .xb{background:transparent!important;padding:4px 8px!important;opacity:.7}
 
 /* MAIN */
 .main{max-width:1200px;margin:0 auto;padding:18px;display:grid;grid-template-columns:1fr;gap:18px}
@@ -98,39 +97,62 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 @media(min-width:480px){.grid{grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}}
 
 /* PHOTO CARD */
-.pc{background:#fff;border-radius:var(--rs);overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.07);cursor:pointer;transition:transform .2s,box-shadow .2s}
-.pc:hover{transform:translateY(-4px);box-shadow:var(--sh-h)}
-.pc-img{position:relative;aspect-ratio:4/3;overflow:hidden;background:#f0f0f0}
+.pc{background:#fff;border-radius:var(--rs);overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.07);transition:transform .2s,box-shadow .2s}
+.pc:hover{transform:translateY(-3px);box-shadow:var(--sh-h)}
+.pc-img{position:relative;aspect-ratio:4/3;overflow:hidden;background:#f0f0f0;cursor:pointer}
 .pc-img img{width:100%;height:100%;object-fit:cover;transition:transform .3s;display:block}
-.pc:hover .pc-img img{transform:scale(1.06)}
-.pc-ov{position:absolute;inset:0;background:rgba(0,0,0,.38);display:flex;align-items:flex-end;justify-content:flex-end;padding:8px;opacity:0;transition:opacity .2s}
+.pc:hover .pc-img img{transform:scale(1.05)}
+.pc-ov{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:flex-end;justify-content:flex-end;padding:8px;opacity:0;transition:opacity .2s}
 .pc:hover .pc-ov{opacity:1}
 .pdl{background:#fff;color:var(--pri);border:none;width:33px;height:33px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.22)}
-.pc-info{padding:9px 10px}
+.pc-info{padding:8px 10px 4px}
 .dtag{font-size:.76rem;font-weight:700;color:var(--pri);background:#e8f0fe;padding:3px 8px;border-radius:6px;display:inline-block;margin-bottom:3px}
 .pc-date{font-size:.7rem;color:var(--txt3)}
 
-/* MODAL */
+/* CARD ACTIONS */
+.pc-actions{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid var(--bdr);margin-top:6px}
+.pc-edit,.pc-del{display:flex;align-items:center;justify-content:center;gap:5px;padding:9px 4px;border:none;cursor:pointer;font-size:.75rem;font-weight:600;background:transparent;transition:background .15s,color .15s;font-family:inherit}
+.pc-edit{color:var(--pri);border-right:1px solid var(--bdr)}
+.pc-edit:hover{background:#e8f0fe}
+.pc-del{color:var(--acc)}
+.pc-del:hover{background:#fde8ec}
+.pc-del.confirm{background:var(--acc);color:#fff;border-radius:0 0 var(--rs) 0}
+
+/* MODAL GERAL */
 .modal{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:14px}
 .modal-bg{position:absolute;inset:0;background:rgba(0,0,0,.82);backdrop-filter:blur(6px)}
 .modal-box{position:relative;z-index:1;background:#fff;border-radius:var(--r);overflow:hidden;max-width:480px;width:100%;max-height:92vh;display:flex;flex-direction:column;box-shadow:0 24px 64px rgba(0,0,0,.5)}
 .mc{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.55);color:#fff;border:none;width:33px;height:33px;border-radius:50%;font-size:14px;cursor:pointer;z-index:10;display:flex;align-items:center;justify-content:center}
-.miw{overflow:hidden;max-height:58vh;background:#000;flex-shrink:0}
+
+/* MODAL FOTO */
+.miw{overflow:hidden;max-height:55vh;background:#000;flex-shrink:0}
 .miw img{width:100%;height:100%;object-fit:contain;display:block}
-.mm{padding:16px;display:flex;flex-direction:column;gap:9px}
+.mm{padding:16px;display:flex;flex-direction:column;gap:10px}
 .mdock{display:flex;align-items:center;gap:7px;font-size:1.05rem;font-weight:700;color:var(--pri)}
 .mdate{font-size:.8rem;color:var(--txt3)}
+.modal-actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.btn-edit-sm{background:#e8f0fe;color:var(--pri);padding:11px;font-size:.85rem;border-radius:var(--rs);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-weight:600;font-family:inherit}
+.btn-del-sm{background:#fde8ec;color:var(--acc);padding:11px;font-size:.85rem;border-radius:var(--rs);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-weight:600;font-family:inherit}
+.btn-dl-sm{background:linear-gradient(135deg,var(--pri),var(--pri-d));color:#fff;padding:11px;font-size:.85rem;border-radius:var(--rs);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;font-weight:600;font-family:inherit}
 
-/* CAMERA MODAL */
+/* MODAL EDITAR */
+.edit-body{padding:22px;display:flex;flex-direction:column;gap:14px}
+.edit-body h3{font-size:1rem;font-weight:700;color:var(--pri)}
+.edit-preview{width:100%;height:130px;object-fit:cover;border-radius:var(--rs);display:block;background:#f0f0f0}
+.edit-inp{width:100%;padding:12px 14px;border:2px solid var(--bdr);border-radius:var(--rs);font-size:.96rem;color:var(--txt);font-family:inherit;transition:border-color .2s}
+.edit-inp:focus{outline:none;border-color:var(--pri)}
+.btn-edit-save{width:100%;background:linear-gradient(135deg,var(--ok),var(--ok-d));color:#fff;padding:13px;font-size:.93rem;border:none;border-radius:var(--rs);cursor:pointer;font-weight:600;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;min-height:48px}
+
+/* CÂMERA AO VIVO */
 .cam-modal{position:fixed;inset:0;z-index:2000;background:#000;display:flex;flex-direction:column}
 .cam-hdr{position:absolute;top:0;left:0;right:0;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:14px;background:linear-gradient(to bottom,rgba(0,0,0,.75),transparent)}
-.cam-cancel{color:#fff;background:rgba(255,255,255,.18);border:none;padding:8px 15px;border-radius:99px;cursor:pointer;font-size:.86rem;font-weight:600;backdrop-filter:blur(6px)}
+.cam-cancel{color:#fff;background:rgba(255,255,255,.18);border:none;padding:8px 15px;border-radius:99px;cursor:pointer;font-size:.86rem;font-weight:600}
 .cam-title{color:#fff;font-weight:600;font-size:.9rem}
-.cam-flip{color:#fff;background:rgba(255,255,255,.18);border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
-.cam-vwrap{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.cam-flip{color:#fff;background:rgba(255,255,255,.18);border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center}
+.cam-vwrap{flex:1;position:relative;overflow:hidden}
 #camVideo{width:100%;height:100%;object-fit:cover;display:block;transform:scaleX(var(--mirror,1))}
 .cam-ftr{position:absolute;bottom:0;left:0;right:0;padding:26px 24px 34px;display:flex;align-items:center;justify-content:center;background:linear-gradient(to top,rgba(0,0,0,.7),transparent)}
-.shutter{width:74px;height:74px;border-radius:50%;border:4px solid #fff;background:rgba(255,255,255,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .1s,background .12s;backdrop-filter:blur(4px)}
+.shutter{width:74px;height:74px;border-radius:50%;border:4px solid #fff;background:rgba(255,255,255,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .1s,background .12s}
 .shutter:active{transform:scale(.88);background:rgba(255,255,255,.55)}
 .shutter-in{width:52px;height:52px;border-radius:50%;background:#fff;pointer-events:none}
 
@@ -143,7 +165,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   .main{padding:10px;gap:10px}
   .card,.gal-sec{padding:14px}
   .grid{grid-template-columns:repeat(2,1fr);gap:9px}
-  .hd h1{font-size:1.1rem}
+  .hd h1{font-size:1.05rem}
+  .modal-actions{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -160,22 +183,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       <rect x="52" y="82" width="14" height="9" rx="3" fill="white" opacity="0.7"/>
     </svg>
     <h1>Fotos Doca</h1>
-    <button class="dl-app-btn" onclick="downloadApp()" title="Baixar app como arquivo HTML">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-        <polyline points="7 10 12 15 17 10"/>
-        <line x1="12" y1="15" x2="12" y2="3"/>
+    <button class="dl-app-btn" onclick="downloadApp()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
       </svg>
       Baixar App
     </button>
-    <div class="conn">
-      <span class="dot"></span>
-      <span>Local</span>
-    </div>
+    <div class="conn"><span class="dot"></span><span>Local</span></div>
   </div>
 </header>
 
-<!-- INSTALL BANNER -->
+<!-- INSTALL -->
 <div class="inst-bar" id="installBar" style="display:none">
   <span>📱 Instale o app no seu celular!</span>
   <button id="installBtn">Instalar</button>
@@ -214,8 +232,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <div class="cam-btns">
       <button class="btn btn-pri" id="openCam">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-          <circle cx="12" cy="13" r="4"/>
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
         </svg>
         Câmera
       </button>
@@ -233,8 +250,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       <label for="dockInput">Número da Doca *</label>
       <div class="inp-wrap">
         <svg class="inp-ico" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <rect x="2" y="7" width="20" height="14" rx="2"/>
-          <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+          <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
         </svg>
         <input class="inp" type="text" id="dockInput" placeholder="Ex: DOCA-01, A12, 205…" autocomplete="off">
       </div>
@@ -243,8 +259,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <button class="btn btn-save" id="saveBtn" disabled>
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
         <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-        <polyline points="17 21 17 13 7 13 7 21"/>
-        <polyline points="7 3 7 8 15 8"/>
+        <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
       </svg>
       Salvar Foto
     </button>
@@ -271,9 +286,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       </div>
     </div>
 
-    <div class="loading" id="galLoad">
-      <div class="spin"></div><p>Carregando…</p>
-    </div>
+    <div class="loading" id="galLoad"><div class="spin"></div><p>Carregando…</p></div>
     <div class="empty" id="emptyState" style="display:none">
       <svg width="68" height="68" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
@@ -285,8 +298,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   </section>
 </main>
 
-<!-- MODAL FOTO -->
-<div class="modal" id="modal" style="display:none" role="dialog">
+<!-- MODAL VER FOTO -->
+<div class="modal" id="modal" style="display:none">
   <div class="modal-bg" id="modalBg"></div>
   <div class="modal-box">
     <button class="mc" id="modalClose">✕</button>
@@ -294,28 +307,67 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <div class="mm">
       <div class="mdock" id="modalDock"></div>
       <div class="mdate" id="modalDate"></div>
-      <button class="btn btn-dl" id="modalDlBtn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-          <polyline points="7 10 12 15 17 10"/>
-          <line x1="12" y1="15" x2="12" y2="3"/>
+      <div class="modal-actions">
+        <button class="btn-edit-sm" id="modalEditBtn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          Editar
+        </button>
+        <button class="btn-del-sm" id="modalDelBtn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+          </svg>
+          Apagar
+        </button>
+        <button class="btn-dl-sm" id="modalDlBtn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Baixar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL EDITAR -->
+<div class="modal" id="editModal" style="display:none">
+  <div class="modal-bg" id="editBg"></div>
+  <div class="modal-box" style="max-height:auto">
+    <button class="mc" id="editClose">✕</button>
+    <div class="edit-body">
+      <h3>
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" style="vertical-align:middle;margin-right:6px">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
         </svg>
-        Baixar Foto
+        Editar Número da Doca
+      </h3>
+      <img class="edit-preview" id="editPreview" alt="Foto">
+      <input class="edit-inp" type="text" id="editDockInput" placeholder="Número da Doca" autocomplete="off">
+      <button class="btn-edit-save" id="editSaveBtn">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+          <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+        </svg>
+        Salvar Alteração
       </button>
     </div>
   </div>
 </div>
 
-<!-- CÂMERA AO VIVO -->
-<div class="cam-modal" id="camModal" style="display:none" role="dialog">
+<!-- CÂMERA -->
+<div class="cam-modal" id="camModal" style="display:none">
   <div class="cam-hdr">
     <button class="cam-cancel" id="camCancel">✕ Cancelar</button>
     <span class="cam-title">Câmera</span>
-    <button class="cam-flip" id="camFlip" title="Virar câmera">🔄</button>
+    <button class="cam-flip" id="camFlip">🔄</button>
   </div>
-  <div class="cam-vwrap">
-    <video id="camVideo" autoplay playsinline muted></video>
-  </div>
+  <div class="cam-vwrap"><video id="camVideo" autoplay playsinline muted></video></div>
   <div class="cam-ftr">
     <button class="shutter" id="captureBtn"><span class="shutter-in"></span></button>
   </div>
@@ -326,7 +378,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
 <script>
 // ── IndexedDB ────────────────────────────────────────
-const DB='fotos-doca', VER=1, ST='fotos';
+const DB='fotos-doca',VER=1,ST='fotos';
 function openDB(){
   return new Promise((res,rej)=>{
     const r=indexedDB.open(DB,VER);
@@ -344,74 +396,83 @@ function openDB(){
 async function dbSave(data){
   const db=await openDB();
   return new Promise((res,rej)=>{
-    const tx=db.transaction(ST,'readwrite');
-    const r=tx.objectStore(ST).add(data);
-    r.onsuccess=e=>res(e.target.result);
-    r.onerror=e=>rej(e.target.error);
+    const r=db.transaction(ST,'readwrite').objectStore(ST).add(data);
+    r.onsuccess=e=>res(e.target.result); r.onerror=e=>rej(e.target.error);
+  });
+}
+async function dbUpdate(id,data){
+  const db=await openDB();
+  return new Promise((res,rej)=>{
+    const r=db.transaction(ST,'readwrite').objectStore(ST).put({...data,id});
+    r.onsuccess=()=>res(); r.onerror=e=>rej(e.target.error);
+  });
+}
+async function dbDelete(id){
+  const db=await openDB();
+  return new Promise((res,rej)=>{
+    const r=db.transaction(ST,'readwrite').objectStore(ST).delete(id);
+    r.onsuccess=()=>res(); r.onerror=e=>rej(e.target.error);
   });
 }
 async function dbGetAll(){
   const db=await openDB();
   return new Promise((res,rej)=>{
-    const tx=db.transaction(ST,'readonly');
-    const r=tx.objectStore(ST).index('ts').getAll();
-    r.onsuccess=e=>res(e.target.result.reverse());
-    r.onerror=e=>rej(e.target.error);
+    const r=db.transaction(ST,'readonly').objectStore(ST).index('ts').getAll();
+    r.onsuccess=e=>res(e.target.result.reverse()); r.onerror=e=>rej(e.target.error);
   });
 }
 
 // ── DOM ──────────────────────────────────────────────
 const $=id=>document.getElementById(id);
-const camInput=$('camInput'), galInput=$('galInput');
-const photoPreview=$('photoPreview'), previewPh=$('previewPh'), rmBtn=$('rmBtn');
-const dockInput=$('dockInput'), saveBtn=$('saveBtn');
-const progWrap=$('progWrap'), progFill=$('progFill'), progLbl=$('progLbl');
-const photoGrid=$('photoGrid'), galLoad=$('galLoad'), emptyState=$('emptyState'), cntBadge=$('cntBadge');
+const camInput=$('camInput'),galInput=$('galInput');
+const photoPreview=$('photoPreview'),previewPh=$('previewPh'),rmBtn=$('rmBtn');
+const dockInput=$('dockInput'),saveBtn=$('saveBtn');
+const progWrap=$('progWrap'),progFill=$('progFill'),progLbl=$('progLbl');
+const photoGrid=$('photoGrid'),galLoad=$('galLoad'),emptyState=$('emptyState'),cntBadge=$('cntBadge');
 const searchInput=$('searchInput');
-const modal=$('modal'), modalBg=$('modalBg'), modalClose=$('modalClose');
-const modalImg=$('modalImg'), modalDock=$('modalDock'), modalDate=$('modalDate'), modalDlBtn=$('modalDlBtn');
-const installBar=$('installBar'), installBtn=$('installBtn'), closeBar=$('closeBar');
-const toast=$('toast'), previewWrap=$('previewWrap');
-const camModal=$('camModal'), camVideo=$('camVideo'), camCancel=$('camCancel'), camFlip=$('camFlip'), captureBtn=$('captureBtn');
+const modal=$('modal'),modalBg=$('modalBg'),modalClose=$('modalClose');
+const modalImg=$('modalImg'),modalDock=$('modalDock'),modalDate=$('modalDate');
+const modalDlBtn=$('modalDlBtn'),modalEditBtn=$('modalEditBtn'),modalDelBtn=$('modalDelBtn');
+const editModal=$('editModal'),editBg=$('editBg'),editClose=$('editClose');
+const editPreview=$('editPreview'),editDockInput=$('editDockInput'),editSaveBtn=$('editSaveBtn');
+const installBar=$('installBar'),installBtn=$('installBtn'),closeBar=$('closeBar');
+const toast=$('toast'),previewWrap=$('previewWrap');
+const camModal=$('camModal'),camVideo=$('camVideo'),camCancel=$('camCancel'),camFlip=$('camFlip'),captureBtn=$('captureBtn');
 
 // ── State ────────────────────────────────────────────
-let currentPhoto=null, allPhotos=[], modalPhoto=null, deferredPWA=null;
-let cameraStream=null, facingMode='environment';
+let currentPhoto=null,allPhotos=[],modalPhoto=null,editingPhoto=null;
+let deferredPWA=null,cameraStream=null,facingMode='environment';
 
 // ── Câmera ───────────────────────────────────────────
-$('openCam').addEventListener('click', openCamera);
-$('openGal').addEventListener('click', ()=>galInput.click());
-galInput.addEventListener('change', onFile);
+$('openCam').addEventListener('click',openCamera);
+$('openGal').addEventListener('click',()=>galInput.click());
+galInput.addEventListener('change',onFile);
 
 async function openCamera(){
-  if(!navigator.mediaDevices?.getUserMedia){ camInput.click(); return; }
+  if(!navigator.mediaDevices?.getUserMedia){camInput.click();return;}
   try{
-    try{ cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode,width:{ideal:1920},height:{ideal:1080}},audio:false}); }
-    catch{ cameraStream=await navigator.mediaDevices.getUserMedia({video:true,audio:false}); }
+    try{cameraStream=await navigator.mediaDevices.getUserMedia({video:{facingMode,width:{ideal:1920},height:{ideal:1080}},audio:false});}
+    catch{cameraStream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});}
     camVideo.srcObject=cameraStream;
-    camVideo.style.setProperty('--mirror', facingMode==='user'?'-1':'1');
-    camModal.style.display='flex';
-    document.body.style.overflow='hidden';
-  }catch(e){ toast2('Câmera bloqueada. Verifique as permissões.','err'); }
+    camVideo.style.setProperty('--mirror',facingMode==='user'?'-1':'1');
+    camModal.style.display='flex'; document.body.style.overflow='hidden';
+  }catch(e){toast2('Câmera bloqueada. Verifique as permissões.','err');}
 }
 function closeCamera(){
   cameraStream?.getTracks().forEach(t=>t.stop());
   cameraStream=null; camVideo.srcObject=null;
   camModal.style.display='none'; document.body.style.overflow='';
 }
-camCancel.addEventListener('click', closeCamera);
-camFlip.addEventListener('click', async()=>{ facingMode=facingMode==='environment'?'user':'environment'; closeCamera(); await openCamera(); });
-captureBtn.addEventListener('click', ()=>{
-  if(!camVideo.videoWidth) return;
+camCancel.addEventListener('click',closeCamera);
+camFlip.addEventListener('click',async()=>{facingMode=facingMode==='environment'?'user':'environment';closeCamera();await openCamera();});
+captureBtn.addEventListener('click',()=>{
+  if(!camVideo.videoWidth)return;
   const c=document.createElement('canvas');
   c.width=camVideo.videoWidth; c.height=camVideo.videoHeight;
   const ctx=c.getContext('2d');
-  if(facingMode==='user'){ ctx.translate(c.width,0); ctx.scale(-1,1); }
+  if(facingMode==='user'){ctx.translate(c.width,0);ctx.scale(-1,1);}
   ctx.drawImage(camVideo,0,0);
-  c.toBlob(blob=>{
-    setPhoto({file:new File([blob],'camera.jpg',{type:'image/jpeg'}), dataUrl:c.toDataURL('image/jpeg',.85)});
-    closeCamera();
-  },'image/jpeg',.85);
+  c.toBlob(blob=>{setPhoto({file:new File([blob],'camera.jpg',{type:'image/jpeg'}),dataUrl:c.toDataURL('image/jpeg',.85)});closeCamera();},'image/jpeg',.85);
 });
 
 function setPhoto(p){
@@ -421,98 +482,171 @@ function setPhoto(p){
   previewWrap.classList.add('has-photo'); checkSave();
 }
 function onFile(e){
-  const f=e.target.files[0]; if(!f) return;
+  const f=e.target.files[0]; if(!f)return;
   const r=new FileReader();
   r.onload=ev=>setPhoto({file:f,dataUrl:ev.target.result});
   r.readAsDataURL(f); e.target.value='';
 }
-rmBtn.addEventListener('click', clearPhoto);
+rmBtn.addEventListener('click',clearPhoto);
 function clearPhoto(){
   currentPhoto=null; photoPreview.style.display='none'; photoPreview.src='';
   previewPh.style.display='flex'; rmBtn.style.display='none';
   previewWrap.classList.remove('has-photo'); checkSave();
 }
 
-// ── Dock / Save ──────────────────────────────────────
-dockInput.addEventListener('input', checkSave);
-function checkSave(){ saveBtn.disabled=!(currentPhoto&&dockInput.value.trim()); }
+// ── Salvar ───────────────────────────────────────────
+dockInput.addEventListener('input',checkSave);
+function checkSave(){saveBtn.disabled=!(currentPhoto&&dockInput.value.trim());}
 
-saveBtn.addEventListener('click', async()=>{
-  if(!currentPhoto||!dockInput.value.trim()) return;
+saveBtn.addEventListener('click',async()=>{
+  if(!currentPhoto||!dockInput.value.trim())return;
   const dock=dockInput.value.trim().toUpperCase().replace(/\s+/g,'-');
-  const now=new Date(), pad=n=>String(n).padStart(2,'0');
+  const now=new Date(),pad=n=>String(n).padStart(2,'0');
   const stamp=`${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-  const fileName=`DOCA-${dock}_${stamp}.jpg`;
   saveBtn.disabled=true; progWrap.style.display='block';
   progFill.style.width='30%'; progLbl.textContent='Salvando…';
   try{
-    await dbSave({dockNumber:dock, fileName, url:currentPhoto.dataUrl, timestamp:now.getTime()});
+    await dbSave({dockNumber:dock,fileName:`DOCA-${dock}_${stamp}.jpg`,url:currentPhoto.dataUrl,timestamp:now.getTime()});
     progFill.style.width='100%'; progLbl.textContent='Salvo!';
-    setTimeout(()=>{ resetSave(); clearPhoto(); dockInput.value=''; loadPhotos(); toast2('Foto salva!','ok'); },500);
-  }catch(e){ toast2('Erro: '+e.message,'err'); resetSave(); }
+    setTimeout(()=>{resetSave();clearPhoto();dockInput.value='';loadPhotos();toast2('Foto salva!','ok');},500);
+  }catch(e){toast2('Erro: '+e.message,'err');resetSave();}
 });
-function resetSave(){ saveBtn.disabled=false; checkSave(); progWrap.style.display='none'; progFill.style.width='0%'; }
+function resetSave(){saveBtn.disabled=false;checkSave();progWrap.style.display='none';progFill.style.width='0%';}
 
 // ── Galeria ──────────────────────────────────────────
 async function loadPhotos(){
-  try{ allPhotos=await dbGetAll(); }catch{ allPhotos=[]; }
+  try{allPhotos=await dbGetAll();}catch{allPhotos=[];}
   galLoad.style.display='none'; render();
 }
-searchInput.addEventListener('input', render);
+searchInput.addEventListener('input',render);
 
 function render(){
   const q=searchInput.value.trim().toLowerCase();
   const list=q?allPhotos.filter(p=>p.dockNumber.toLowerCase().includes(q)||p.fileName.toLowerCase().includes(q)):allPhotos;
   cntBadge.textContent=`${list.length} foto${list.length!==1?'s':''}`;
-  if(!list.length){ photoGrid.innerHTML=''; emptyState.style.display='flex'; return; }
+  if(!list.length){photoGrid.innerHTML='';emptyState.style.display='flex';return;}
   emptyState.style.display='none';
   photoGrid.innerHTML=list.map(p=>{
     const d=new Date(p.timestamp);
-    const ds=d.toLocaleDateString('pt-BR'), ts=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const ds=d.toLocaleDateString('pt-BR'),ts=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
     return `<div class="pc" data-id="${p.id}">
-      <div class="pc-img">
+      <div class="pc-img" data-id="${p.id}">
         <img src="${p.url}" alt="Doca ${p.dockNumber}" loading="lazy">
         <div class="pc-ov">
           <button class="pdl" data-id="${p.id}" title="Baixar">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/>
-              <line x1="12" y1="15" x2="12" y2="3"/>
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
             </svg>
           </button>
         </div>
       </div>
       <div class="pc-info"><span class="dtag">Doca: ${p.dockNumber}</span><div class="pc-date">${ds} ${ts}</div></div>
+      <div class="pc-actions">
+        <button class="pc-edit" data-id="${p.id}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+          </svg>
+          Editar
+        </button>
+        <button class="pc-del" data-id="${p.id}">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <path d="M10 11v6"/><path d="M14 11v6"/>
+          </svg>
+          Apagar
+        </button>
+      </div>
     </div>`;
   }).join('');
-  photoGrid.querySelectorAll('.pc').forEach(el=>el.addEventListener('click',()=>openModal(Number(el.dataset.id))));
-  photoGrid.querySelectorAll('.pdl').forEach(el=>el.addEventListener('click',ev=>{ev.stopPropagation();dlPhoto(getP(Number(el.dataset.id)));}));
-}
-function getP(id){ return allPhotos.find(p=>p.id===id); }
 
-// ── Modal ────────────────────────────────────────────
+  photoGrid.querySelectorAll('.pc-img').forEach(el=>el.addEventListener('click',()=>openModal(Number(el.dataset.id))));
+  photoGrid.querySelectorAll('.pdl').forEach(el=>el.addEventListener('click',ev=>{ev.stopPropagation();dlPhoto(getP(Number(el.dataset.id)));}));
+  photoGrid.querySelectorAll('.pc-edit').forEach(el=>el.addEventListener('click',ev=>{ev.stopPropagation();openEdit(Number(el.dataset.id));}));
+  photoGrid.querySelectorAll('.pc-del').forEach(el=>el.addEventListener('click',ev=>{ev.stopPropagation();handleDelete(el,Number(el.dataset.id));}));
+}
+function getP(id){return allPhotos.find(p=>p.id===id);}
+
+// ── Delete com confirmação ───────────────────────────
+let deleteTimer=null;
+function handleDelete(btn,id){
+  if(btn.classList.contains('confirm')){
+    clearTimeout(deleteTimer);
+    deleteTimer=null;
+    doDelete(id);
+  } else {
+    btn.classList.add('confirm');
+    btn.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Confirmar`;
+    deleteTimer=setTimeout(()=>{
+      btn.classList.remove('confirm');
+      btn.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg> Apagar`;
+    },3000);
+  }
+}
+async function doDelete(id){
+  try{
+    await dbDelete(id);
+    if(modalPhoto?.id===id) closeModal();
+    await loadPhotos();
+    toast2('Foto apagada!','ok');
+  }catch(e){toast2('Erro ao apagar: '+e.message,'err');}
+}
+
+// ── Modal ver foto ───────────────────────────────────
 function openModal(id){
-  const p=getP(id); if(!p) return;
+  const p=getP(id); if(!p)return;
   modalPhoto=p; modalImg.src=p.url;
   modalDock.textContent=`Doca: ${p.dockNumber}`;
   modalDate.textContent=new Date(p.timestamp).toLocaleString('pt-BR');
   modal.style.display='flex'; document.body.style.overflow='hidden';
 }
-function closeModal(){ modal.style.display='none'; document.body.style.overflow=''; modalImg.src=''; modalPhoto=null; }
+function closeModal(){modal.style.display='none';document.body.style.overflow='';modalImg.src='';modalPhoto=null;}
 modalClose.addEventListener('click',closeModal);
 modalBg.addEventListener('click',closeModal);
-document.addEventListener('keydown',e=>e.key==='Escape'&&closeModal());
+document.addEventListener('keydown',e=>e.key==='Escape'&&(closeEditModal(),closeModal()));
 modalDlBtn.addEventListener('click',()=>modalPhoto&&dlPhoto(modalPhoto));
+modalEditBtn.addEventListener('click',()=>{if(modalPhoto){closeModal();openEdit(modalPhoto.id);}});
+modalDelBtn.addEventListener('click',()=>{
+  if(!modalPhoto)return;
+  if(confirm(`Apagar foto da ${modalPhoto.dockNumber}?`)){doDelete(modalPhoto.id);}
+});
+
+// ── Modal editar ─────────────────────────────────────
+function openEdit(id){
+  const p=getP(id); if(!p)return;
+  editingPhoto=p;
+  editPreview.src=p.url;
+  editDockInput.value=p.dockNumber;
+  editModal.style.display='flex'; document.body.style.overflow='hidden';
+  setTimeout(()=>editDockInput.focus(),100);
+}
+function closeEditModal(){editModal.style.display='none';document.body.style.overflow='';editingPhoto=null;}
+editClose.addEventListener('click',closeEditModal);
+editBg.addEventListener('click',closeEditModal);
+editSaveBtn.addEventListener('click',async()=>{
+  if(!editingPhoto||!editDockInput.value.trim())return;
+  const newDock=editDockInput.value.trim().toUpperCase().replace(/\s+/g,'-');
+  const updated={...editingPhoto,dockNumber:newDock,fileName:`DOCA-${newDock}_${new Date(editingPhoto.timestamp).toISOString().replace(/[-T:.Z]/g,'').slice(0,15)}.jpg`};
+  editSaveBtn.disabled=true;
+  try{
+    await dbUpdate(editingPhoto.id,updated);
+    closeEditModal(); await loadPhotos();
+    toast2(`Atualizado para ${newDock}!`,'ok');
+  }catch(e){toast2('Erro ao salvar: '+e.message,'err');}
+  editSaveBtn.disabled=false;
+});
+editDockInput.addEventListener('keydown',e=>e.key==='Enter'&&editSaveBtn.click());
 
 // ── Download foto ────────────────────────────────────
 function dlPhoto(p){
-  if(!p) return;
+  if(!p)return;
   const a=document.createElement('a');
   a.href=p.url; a.download=p.fileName||`DOCA-${p.dockNumber}.jpg`;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   toast2('Download concluído!','ok');
 }
 
-// ── Download do próprio app ──────────────────────────
+// ── Download app ─────────────────────────────────────
 async function downloadApp(){
   toast2('Preparando arquivo…','info');
   try{
@@ -521,40 +655,35 @@ async function downloadApp(){
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
     a.href=url; a.download='fotos-doca.html';
-    document.body.appendChild(a); a.click();
-    document.body.removeChild(a); URL.revokeObjectURL(url);
-    toast2('App baixado!','ok');
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url); toast2('App baixado!','ok');
   }catch{
-    // Fallback: serializa o HTML atual
     const html='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
     const blob=new Blob([html],{type:'text/html;charset=utf-8'});
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
     a.href=url; a.download='fotos-doca.html';
-    document.body.appendChild(a); a.click();
-    document.body.removeChild(a); URL.revokeObjectURL(url);
-    toast2('App baixado!','ok');
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url); toast2('App baixado!','ok');
   }
 }
 
 // ── PWA ──────────────────────────────────────────────
-window.addEventListener('beforeinstallprompt',e=>{
-  e.preventDefault(); deferredPWA=e; installBar.style.display='flex';
-});
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPWA=e;installBar.style.display='flex';});
 installBtn.addEventListener('click',async()=>{
-  if(!deferredPWA) return;
+  if(!deferredPWA)return;
   deferredPWA.prompt();
   const{outcome}=await deferredPWA.userChoice;
-  if(outcome==='accepted') toast2('App instalado!','ok');
+  if(outcome==='accepted')toast2('App instalado!','ok');
   deferredPWA=null; installBar.style.display='none';
 });
-closeBar.addEventListener('click',()=>{ installBar.style.display='none'; });
+closeBar.addEventListener('click',()=>{installBar.style.display='none';});
 
 // ── Toast ────────────────────────────────────────────
 let tt;
 function toast2(msg,type='info'){
   toast.textContent=msg; toast.className=`toast show ${type}`;
-  clearTimeout(tt); tt=setTimeout(()=>{ toast.className='toast'; },3000);
+  clearTimeout(tt); tt=setTimeout(()=>{toast.className='toast';},3000);
 }
 
 // ── Init ─────────────────────────────────────────────
