@@ -18,8 +18,8 @@
   --sh:0 4px 24px rgba(15,52,96,.10);--sh-h:0 8px 32px rgba(15,52,96,.18);
   --r:16px;--rs:10px;
 }
-html{scroll-behavior:smooth}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;line-height:1.5}
+html{scroll-behavior:smooth;overflow-x:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;line-height:1.5;overflow-x:hidden;width:100%}
 
 /* HEADER */
 .header{background:linear-gradient(135deg,var(--pri-bg),var(--pri));color:#fff;position:sticky;top:0;z-index:100;box-shadow:0 2px 20px rgba(0,0,0,.3)}
@@ -82,7 +82,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .gal-sec{background:var(--card);border-radius:var(--r);padding:20px;box-shadow:var(--sh)}
 .gal-head h2{font-size:1rem;font-weight:700;color:var(--pri);margin-bottom:11px;display:flex;align-items:center;gap:8px}
 .gal-ctrl{display:flex;gap:10px;align-items:center;margin-bottom:16px}
-.srch{flex:1;padding:10px 13px;border:2px solid var(--bdr);border-radius:var(--rs);font-size:.88rem;color:var(--txt);font-family:inherit;transition:border-color .2s}
+.srch{flex:1;min-width:0;padding:10px 13px;border:2px solid var(--bdr);border-radius:var(--rs);font-size:.88rem;color:var(--txt);font-family:inherit;transition:border-color .2s}
 .srch:focus{outline:none;border-color:var(--pri)}
 .cnt{font-size:.76rem;color:var(--txt3);white-space:nowrap;background:#f0f4f8;padding:6px 11px;border-radius:99px}
 .btn-del-all{display:flex;align-items:center;gap:5px;background:#fde8ec;color:var(--acc);border:1.5px solid #f5c6cf;padding:7px 11px;border-radius:var(--rs);cursor:pointer;font-size:.76rem;font-weight:600;white-space:nowrap;transition:background .15s,color .15s;font-family:inherit}
@@ -172,11 +172,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .toast.ok{background:var(--ok)}.toast.err{background:var(--acc)}.toast.info{background:var(--pri)}
 
 @media(max-width:767px){
-  .main{padding:10px;gap:10px}
-  .card,.gal-sec{padding:14px}
+  .main{padding:8px;gap:10px;width:100%}
+  .card,.gal-sec{padding:13px;width:100%;box-sizing:border-box}
   .grid{grid-template-columns:repeat(2,1fr);gap:9px}
-  .hd h1{font-size:1.05rem}
+  .hd{padding:11px 12px;gap:8px}
+  .hd h1{font-size:1rem;min-width:0}
+  .dl-app-btn{padding:6px 9px;font-size:.72rem;gap:4px}
+  .conn{padding:4px 8px;font-size:.7rem}
   .modal-actions{grid-template-columns:1fr}
+  /* gallery control row — badge+button wrap below search */
+  .gal-ctrl{flex-wrap:wrap;gap:8px}
+  .srch{flex:1 1 100%;order:0}
+  .cnt{order:1}
+  .btn-del-all{order:2;margin-left:auto}
+  /* camera buttons */
+  .cam-btns{gap:8px}
+  .btn{font-size:.84rem;padding:10px 8px;gap:5px;min-height:44px}
+  /* photo card actions */
+  .pc-edit,.pc-del{font-size:.72rem;padding:8px 4px}
 }
 </style>
 </head>
