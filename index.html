@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Fotos Doca">
 <title>Fotos Doca</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
@@ -212,7 +213,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       </svg>
       Baixar App
     </button>
-    <div class="conn"><span class="dot"></span><span>Local</span></div>
+    <div class="conn"><span class="dot"></span><span>Nuvem</span></div>
   </div>
 </header>
 
@@ -413,49 +414,47 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div class="toast" id="toast" role="status"></div>
 
 <script>
-// ── IndexedDB ────────────────────────────────────────
-const DB='fotos-doca',VER=1,ST='fotos';
-function openDB(){
-  return new Promise((res,rej)=>{
-    const r=indexedDB.open(DB,VER);
-    r.onupgradeneeded=e=>{
-      const db=e.target.result;
-      if(!db.objectStoreNames.contains(ST)){
-        const s=db.createObjectStore(ST,{keyPath:'id',autoIncrement:true});
-        s.createIndex('ts','timestamp');
-      }
-    };
-    r.onsuccess=e=>res(e.target.result);
-    r.onerror=e=>rej(e.target.error);
-  });
+// ── Supabase Config ───────────────────────────────────
+// Preencha com suas credenciais: supabase.com → Settings → API
+const SUPABASE_URL = 'https://SEU_PROJETO.supabase.co';
+const SUPABASE_KEY = 'SUA_CHAVE_ANONIMA';
+const BUCKET = 'fotos';
+const supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+async function dbSave(data) {
+  const blob = await (await fetch(data.url)).blob();
+  const { error: upErr } = await supa.storage.from(BUCKET).upload(data.fileName, blob, { contentType: 'image/jpeg', upsert: false });
+  if (upErr) throw upErr;
+  const { data: { publicUrl } } = supa.storage.from(BUCKET).getPublicUrl(data.fileName);
+  const { data: row, error } = await supa.from('fotos').insert({
+    dock_number: data.dockNumber, file_name: data.fileName,
+    image_url: publicUrl, timestamp: data.timestamp
+  }).select().single();
+  if (error) throw error;
+  return row.id;
 }
-async function dbSave(data){
-  const db=await openDB();
-  return new Promise((res,rej)=>{
-    const r=db.transaction(ST,'readwrite').objectStore(ST).add(data);
-    r.onsuccess=e=>res(e.target.result); r.onerror=e=>rej(e.target.error);
-  });
+async function dbUpdate(id, data) {
+  const { error } = await supa.from('fotos').update({
+    dock_number: data.dockNumber, file_name: data.fileName
+  }).eq('id', id);
+  if (error) throw error;
 }
-async function dbUpdate(id,data){
-  const db=await openDB();
-  return new Promise((res,rej)=>{
-    const r=db.transaction(ST,'readwrite').objectStore(ST).put({...data,id});
-    r.onsuccess=()=>res(); r.onerror=e=>rej(e.target.error);
-  });
+async function dbDelete(id) {
+  const { data: row } = await supa.from('fotos').select('file_name').eq('id', id).single();
+  if (row) await supa.storage.from(BUCKET).remove([row.file_name]);
+  const { error } = await supa.from('fotos').delete().eq('id', id);
+  if (error) throw error;
 }
-async function dbDelete(id){
-  const db=await openDB();
-  return new Promise((res,rej)=>{
-    const r=db.transaction(ST,'readwrite').objectStore(ST).delete(id);
-    r.onsuccess=()=>res(); r.onerror=e=>rej(e.target.error);
-  });
+async function dbGetAll() {
+  const { data, error } = await supa.from('fotos').select('*').order('timestamp', { ascending: false });
+  if (error) throw error;
+  return data.map(r => ({ id: r.id, dockNumber: r.dock_number, fileName: r.file_name, url: r.image_url, timestamp: r.timestamp }));
 }
-async function dbGetAll(){
-  const db=await openDB();
-  return new Promise((res,rej)=>{
-    const r=db.transaction(ST,'readonly').objectStore(ST).index('ts').getAll();
-    r.onsuccess=e=>res(e.target.result.reverse()); r.onerror=e=>rej(e.target.error);
-  });
+async function dbDeleteAll() {
+  const { data: rows } = await supa.from('fotos').select('file_name');
+  if (rows?.length) await supa.storage.from(BUCKET).remove(rows.map(r => r.file_name));
+  const { error } = await supa.from('fotos').delete().gte('timestamp', 0);
+  if (error) throw error;
 }
 
 // ── DOM ──────────────────────────────────────────────
@@ -773,11 +772,7 @@ delAllBtn.addEventListener('click',async()=>{
   if(!confirm(`Apagar todas as ${allPhotos.length} foto${allPhotos.length!==1?'s':''}? Isso não pode ser desfeito.`))return;
   delAllBtn.disabled=true;
   try{
-    const db=await openDB();
-    await new Promise((res,rej)=>{
-      const r=db.transaction(ST,'readwrite').objectStore(ST).clear();
-      r.onsuccess=res; r.onerror=e=>rej(e.target.error);
-    });
+    await dbDeleteAll();
     await loadPhotos();
     toast2('Todas as fotos apagadas!','ok');
   }catch(e){toast2('Erro: '+e.message,'err');}
