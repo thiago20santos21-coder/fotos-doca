@@ -28,7 +28,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .hd h1{font-size:1.25rem;font-weight:700;letter-spacing:-.4px;flex:1;color:#333}
 .conn{display:flex;align-items:center;gap:6px;font-size:.75rem;background:rgba(0,0,0,.08);color:#333;padding:5px 10px;border-radius:99px;white-space:nowrap}
 .dot{width:8px;height:8px;border-radius:50%;background:#00A650;animation:pulse 2s infinite}
+.dot.off{background:#999;animation:none}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.pend-tag{font-size:.68rem;font-weight:700;color:#946200;background:#fff2d6;padding:2px 7px;border-radius:4px;display:inline-flex;align-items:center;gap:4px;margin-left:6px}
+.pend-tag svg{width:10px;height:10px}
 
 /* MAIN */
 .main{max-width:1200px;margin:0 auto;padding:18px;display:grid;grid-template-columns:1fr;gap:18px}
@@ -212,7 +215,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       <rect x="52" y="82" width="14" height="9" rx="3" fill="white" opacity="0.7"/>
     </svg>
     <h1>Fotos Doca</h1>
-    <div class="conn"><span class="dot"></span><span>Nuvem</span></div>
+    <div class="conn"><span class="dot" id="connDot"></span><span id="connLabel">Nuvem</span></div>
   </div>
 </header>
 
@@ -320,6 +323,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <div class="grid" id="photoGrid"></div>
   </section>
 </main>
+
+<footer style="text-align:center;padding:22px 16px 26px;color:var(--txt3);font-size:.82rem">
+  @tislima
+</footer>
 
 <!-- MODAL VER FOTO -->
 <div class="modal" id="modal" style="display:none">
@@ -475,6 +482,54 @@ async function dbDeleteAll() {
   if (error) throw error;
 }
 
+// ── Fila local (funciona sem internet) ────────────────
+// Guarda fotos tiradas offline no IndexedDB do aparelho e envia
+// para o Supabase automaticamente assim que a conexão voltar.
+const LDB_NAME='fotosDocaOffline', LDB_STORE='pending';
+function openLDB(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(LDB_NAME,1);
+    req.onupgradeneeded=e=>{
+      const db=e.target.result;
+      if(!db.objectStoreNames.contains(LDB_STORE)) db.createObjectStore(LDB_STORE,{keyPath:'localId',autoIncrement:true});
+    };
+    req.onsuccess=e=>resolve(e.target.result);
+    req.onerror=e=>reject(e.target.error);
+  });
+}
+async function ldbAdd(item){
+  const db=await openLDB();
+  return new Promise((resolve,reject)=>{
+    const req=db.transaction(LDB_STORE,'readwrite').objectStore(LDB_STORE).add(item);
+    req.onsuccess=e=>resolve(e.target.result);
+    req.onerror=e=>reject(e.target.error);
+  });
+}
+async function ldbGetAll(){
+  const db=await openLDB();
+  return new Promise((resolve,reject)=>{
+    const req=db.transaction(LDB_STORE,'readonly').objectStore(LDB_STORE).getAll();
+    req.onsuccess=e=>resolve(e.target.result);
+    req.onerror=e=>reject(e.target.error);
+  });
+}
+async function ldbUpdate(item){
+  const db=await openLDB();
+  return new Promise((resolve,reject)=>{
+    const req=db.transaction(LDB_STORE,'readwrite').objectStore(LDB_STORE).put(item);
+    req.onsuccess=()=>resolve();
+    req.onerror=e=>reject(e.target.error);
+  });
+}
+async function ldbDelete(localId){
+  const db=await openLDB();
+  return new Promise((resolve,reject)=>{
+    const req=db.transaction(LDB_STORE,'readwrite').objectStore(LDB_STORE).delete(localId);
+    req.onsuccess=()=>resolve();
+    req.onerror=e=>reject(e.target.error);
+  });
+}
+
 // ── DOM ──────────────────────────────────────────────
 const $=id=>document.getElementById(id);
 const camInput=$('camInput'),galInput=$('galInput');
@@ -493,6 +548,7 @@ const camModal=$('camModal'),camVideo=$('camVideo'),camCancel=$('camCancel'),cam
 const zoomSlider=$('zoomSlider'),zoomLbl=$('zoomLbl'),zoomOut=$('zoomOut'),zoomIn=$('zoomIn');
 const camFlash=$('camFlash');
 const confirmModal=$('confirmModal'),confirmBg=$('confirmBg'),confirmTitle=$('confirmTitle'),confirmMsg=$('confirmMsg'),confirmCancelBtn=$('confirmCancelBtn'),confirmOkBtn=$('confirmOkBtn');
+const connDot=$('connDot'),connLabel=$('connLabel');
 
 // ── State ────────────────────────────────────────────
 let currentPhoto=null,allPhotos=[],modalPhoto=null,editingPhoto=null;
@@ -501,6 +557,33 @@ let currentZoom=1,zoomHardware=false,zoomCapMin=1,zoomCapMax=5;
 let pinchDist0=0,pinchZoom0=1;
 let torchSupported=false,torchOn=false;
 let confirmCallback=null;
+let pendingObjectUrls=[];
+
+// ── Conexão / sincronização offline ───────────────────
+function updateConnBadge(){
+  if(navigator.onLine){connDot.classList.remove('off');connLabel.textContent='Nuvem';}
+  else{connDot.classList.add('off');connLabel.textContent='Offline';}
+}
+async function syncPending(){
+  if(!navigator.onLine)return;
+  let items=[];
+  try{items=await ldbGetAll();}catch{return;}
+  if(!items.length)return;
+  connLabel.textContent='Enviando…';
+  for(const item of items){
+    try{
+      await dbSave({dockNumber:item.dockNumber,fileName:item.fileName,file:item.blob,timestamp:item.timestamp});
+      await ldbDelete(item.localId);
+    }catch(e){break;}
+  }
+  updateConnBadge();
+  await loadPhotos();
+}
+window.addEventListener('online',()=>{updateConnBadge();syncPending();});
+window.addEventListener('offline',updateConnBadge);
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
+}
 
 // ── Câmera ───────────────────────────────────────────
 $('openCam').addEventListener('click',openCamera);
@@ -650,19 +733,41 @@ saveBtn.addEventListener('click',async()=>{
   const dock=dockInput.value.trim();
   const now=new Date(),pad=n=>String(n).padStart(2,'0');
   const stamp=`${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  const fileName=`DOCA-${dock}_${stamp}.jpg`;
   saveBtn.disabled=true; progWrap.style.display='block';
   progFill.style.width='40%'; progLbl.textContent='Salvando…';
+  if(navigator.onLine){
+    try{
+      await dbSave({dockNumber:dock,fileName,file:currentPhoto.file,timestamp:now.getTime()});
+      progFill.style.width='100%'; progLbl.textContent='Salvo!';
+      resetSave();clearPhoto();dockInput.value='';loadPhotos();toast2('Foto salva!','ok');
+      return;
+    }catch(e){/* sem sinal de internet de verdade: guarda offline abaixo */}
+  }
   try{
-    await dbSave({dockNumber:dock,fileName:`DOCA-${dock}_${stamp}.jpg`,file:currentPhoto.file,timestamp:now.getTime()});
-    progFill.style.width='100%'; progLbl.textContent='Salvo!';
-    resetSave();clearPhoto();dockInput.value='';loadPhotos();toast2('Foto salva!','ok');
+    await ldbAdd({dockNumber:dock,fileName,blob:currentPhoto.file,timestamp:now.getTime()});
+    progFill.style.width='100%'; progLbl.textContent='Salvo (offline)';
+    resetSave();clearPhoto();dockInput.value='';loadPhotos();
+    toast2('Sem internet: foto guardada no aparelho e será enviada ao conectar.','info');
   }catch(e){toast2('Erro: '+e.message,'err');resetSave();}
 });
 function resetSave(){saveBtn.disabled=false;checkSave();progWrap.style.display='none';progFill.style.width='0%';}
 
 // ── Galeria ──────────────────────────────────────────
+function revokePendingUrls(){pendingObjectUrls.forEach(u=>URL.revokeObjectURL(u));pendingObjectUrls=[];}
 async function loadPhotos(){
-  try{allPhotos=await dbGetAll();}catch{allPhotos=[];}
+  let cloud=[];
+  try{cloud=await dbGetAll();}catch{cloud=[];}
+  let pending=[];
+  try{
+    const raw=await ldbGetAll();
+    revokePendingUrls();
+    pending=raw.map(p=>{
+      const url=URL.createObjectURL(p.blob); pendingObjectUrls.push(url);
+      return {id:'local-'+p.localId,localId:p.localId,dockNumber:p.dockNumber,fileName:p.fileName,url,blob:p.blob,timestamp:p.timestamp,pending:true};
+    });
+  }catch{pending=[];}
+  allPhotos=[...pending,...cloud].sort((a,b)=>b.timestamp-a.timestamp);
   galLoad.style.display='none'; render();
 }
 searchInput.addEventListener('input',render);
@@ -688,7 +793,7 @@ function render(){
           </button>
         </div>
       </div>
-      <div class="pc-info"><span class="dtag">Doca: ${p.dockNumber}</span><div class="pc-date">${ds} ${ts}</div></div>
+      <div class="pc-info"><span class="dtag">Doca: ${p.dockNumber}</span>${p.pending?'<span class="pend-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Aguardando envio</span>':''}<div class="pc-date">${ds} ${ts}</div></div>
       <div class="pc-actions">
         <button class="pc-edit" data-id="${p.id}">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
@@ -708,12 +813,12 @@ function render(){
     </div>`;
   }).join('');
 
-  photoGrid.querySelectorAll('.pc-img').forEach(el=>el.addEventListener('click',()=>openModal(Number(el.dataset.id))));
-  photoGrid.querySelectorAll('.pdl').forEach(el=>el.addEventListener('click',ev=>{ev.stopPropagation();dlPhoto(getP(Number(el.dataset.id)));}));
-  photoGrid.querySelectorAll('.pc-edit').forEach(el=>el.addEventListener('click',ev=>{ev.stopPropagation();openEdit(Number(el.dataset.id));}));
-  photoGrid.querySelectorAll('.pc-del').forEach(el=>el.addEventListener('click',ev=>{ev.stopPropagation();handleDelete(el,Number(el.dataset.id));}));
+  photoGrid.querySelectorAll('.pc-img').forEach(el=>el.addEventListener('click',()=>openModal(el.dataset.id)));
+  photoGrid.querySelectorAll('.pdl').forEach(el=>el.addEventListener('click',ev=>{ev.stopPropagation();dlPhoto(getP(el.dataset.id));}));
+  photoGrid.querySelectorAll('.pc-edit').forEach(el=>el.addEventListener('click',ev=>{ev.stopPropagation();openEdit(el.dataset.id);}));
+  photoGrid.querySelectorAll('.pc-del').forEach(el=>el.addEventListener('click',ev=>{ev.stopPropagation();handleDelete(el,el.dataset.id);}));
 }
-function getP(id){return allPhotos.find(p=>p.id===id);}
+function getP(id){return allPhotos.find(p=>String(p.id)===String(id));}
 
 // ── Delete com confirmação ───────────────────────────
 let deleteTimer=null;
@@ -733,8 +838,10 @@ function handleDelete(btn,id){
 }
 async function doDelete(id){
   try{
-    await dbDelete(id);
-    if(modalPhoto?.id===id) closeModal();
+    const p=getP(id);
+    if(p&&p.pending){ await ldbDelete(p.localId); }
+    else{ await dbDelete(p?p.id:id); }
+    if(modalPhoto&&String(modalPhoto.id)===String(id)) closeModal();
     await loadPhotos();
     toast2('Foto apagada!','ok');
   }catch(e){toast2('Erro ao apagar: '+e.message,'err');}
@@ -786,10 +893,14 @@ editBg.addEventListener('click',closeEditModal);
 editSaveBtn.addEventListener('click',async()=>{
   if(!editingPhoto||!editDockInput.value.trim())return;
   const newDock=editDockInput.value.trim();
-  const updated={...editingPhoto,dockNumber:newDock,fileName:`DOCA-${newDock}_${new Date(editingPhoto.timestamp).toISOString().replace(/[-T:.Z]/g,'').slice(0,15)}.jpg`};
+  const newFileName=`DOCA-${newDock}_${new Date(editingPhoto.timestamp).toISOString().replace(/[-T:.Z]/g,'').slice(0,15)}.jpg`;
   editSaveBtn.disabled=true;
   try{
-    await dbUpdate(editingPhoto.id,updated);
+    if(editingPhoto.pending){
+      await ldbUpdate({localId:editingPhoto.localId,dockNumber:newDock,fileName:newFileName,blob:editingPhoto.blob,timestamp:editingPhoto.timestamp});
+    } else {
+      await dbUpdate(editingPhoto.id,{dockNumber:newDock,fileName:newFileName});
+    }
     closeEditModal(); await loadPhotos();
     toast2(`Atualizado para ${newDock}!`,'ok');
   }catch(e){toast2('Erro ao salvar: '+e.message,'err');}
@@ -820,7 +931,9 @@ delAllBtn.addEventListener('click',()=>{
   showConfirm('Apagar todas as fotos?',`Apagar todas as ${allPhotos.length} foto${allPhotos.length!==1?'s':''}? Essa ação não pode ser desfeita.`,async()=>{
     delAllBtn.disabled=true;
     try{
-      await dbDeleteAll();
+      if(navigator.onLine) await dbDeleteAll();
+      const pend=await ldbGetAll();
+      for(const item of pend) await ldbDelete(item.localId);
       await loadPhotos();
       toast2('Todas as fotos apagadas!','ok');
     }catch(e){toast2('Erro: '+e.message,'err');}
@@ -829,7 +942,9 @@ delAllBtn.addEventListener('click',()=>{
 });
 
 // ── Init ─────────────────────────────────────────────
+updateConnBadge();
 loadPhotos();
+setTimeout(syncPending,1200);
 supa.channel('fotos-realtime').on('postgres_changes',{event:'*',schema:'public',table:'fotos'},()=>{loadPhotos();}).subscribe();
 </script>
 </body>
