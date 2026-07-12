@@ -148,7 +148,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .cam-hdr{position:absolute;top:0;left:0;right:0;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:14px;background:linear-gradient(to bottom,rgba(0,0,0,.75),transparent)}
 .cam-cancel{color:#fff;background:rgba(255,255,255,.18);border:none;padding:8px 15px;border-radius:99px;cursor:pointer;font-size:.86rem;font-weight:600}
 .cam-title{color:#fff;font-weight:600;font-size:.9rem}
-.cam-flip{color:#fff;background:rgba(255,255,255,.18);border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center}
+.cam-flip{color:#fff;background:rgba(255,255,255,.18);border:none;width:40px;height:40px;border-radius:50%;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s}
+.cam-flip.active{background:#FFE600;color:#000}
 .cam-vwrap{flex:1;position:relative;overflow:hidden}
 #camVideo{width:100%;height:100%;object-fit:cover;display:block;transform-origin:center center}
 .cam-ftr{position:absolute;bottom:0;left:0;right:0;padding:16px 24px 34px;display:flex;flex-direction:column;align-items:center;gap:14px;background:linear-gradient(to top,rgba(0,0,0,.72),transparent)}
@@ -162,6 +163,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .shutter{width:74px;height:74px;border-radius:50%;border:4px solid #fff;background:rgba(255,255,255,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:transform .1s,background .12s}
 .shutter:active{transform:scale(.88);background:rgba(255,255,255,.55)}
 .shutter-in{width:52px;height:52px;border-radius:50%;background:#fff;pointer-events:none}
+
+/* CONFIRM MODAL */
+.confirm-body{padding:26px 22px 22px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+.confirm-ico{width:52px;height:52px;border-radius:50%;background:#fdeaea;color:var(--acc);display:flex;align-items:center;justify-content:center;margin-bottom:4px}
+.confirm-body h3{font-size:1.02rem;font-weight:700;color:var(--txt)}
+.confirm-body p{font-size:.86rem;color:var(--txt2);line-height:1.5}
+.confirm-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:10px}
+.btn-danger{background:var(--acc);color:#fff}
+.btn-danger:hover{background:#c72525}
 
 /* TOAST */
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(120px);background:#333;color:#fff;padding:10px 20px;border-radius:99px;font-size:.86rem;font-weight:500;z-index:9999;transition:transform .25s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;max-width:90vw;text-align:center;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.22)}
@@ -258,7 +268,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
         <svg class="inp-ico" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
           <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
         </svg>
-        <input class="inp" type="text" id="dockInput" placeholder="Ex: DOCA-01, A12, 205…" autocomplete="off">
+        <input class="inp" type="text" id="dockInput" placeholder="Ex: 01, 12, 205" inputmode="numeric" autocomplete="off">
       </div>
     </div>
 
@@ -361,7 +371,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
         Editar Número da Doca
       </h3>
       <img class="edit-preview" id="editPreview" alt="Foto">
-      <input class="edit-inp" type="text" id="editDockInput" placeholder="Número da Doca" autocomplete="off">
+      <input class="edit-inp" type="text" id="editDockInput" placeholder="Número da Doca" inputmode="numeric" autocomplete="off">
       <button class="btn-edit-save" id="editSaveBtn">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
           <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
@@ -378,7 +388,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   <div class="cam-hdr">
     <button class="cam-cancel" id="camCancel">✕ Cancelar</button>
     <span class="cam-title">Câmera</span>
-    <button class="cam-flip" id="camFlip">🔄</button>
+    <div style="display:flex;gap:8px">
+      <button class="cam-flip" id="camFlash" style="display:none" title="Lanterna">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        </svg>
+      </button>
+      <button class="cam-flip" id="camFlip">🔄</button>
+    </div>
   </div>
   <div class="cam-vwrap"><video id="camVideo" autoplay playsinline muted></video></div>
   <div class="cam-ftr">
@@ -389,6 +406,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       <span class="zoom-lbl" id="zoomLbl">1×</span>
     </div>
     <button class="shutter" id="captureBtn"><span class="shutter-in"></span></button>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMAR -->
+<div class="modal" id="confirmModal" style="display:none">
+  <div class="modal-bg" id="confirmBg"></div>
+  <div class="modal-box" style="max-width:340px">
+    <div class="confirm-body">
+      <div class="confirm-ico">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+        </svg>
+      </div>
+      <h3 id="confirmTitle">Apagar?</h3>
+      <p id="confirmMsg"></p>
+      <div class="confirm-actions">
+        <button class="btn btn-sec" id="confirmCancelBtn">Cancelar</button>
+        <button class="btn btn-danger" id="confirmOkBtn">Apagar</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -453,12 +491,16 @@ const editPreview=$('editPreview'),editDockInput=$('editDockInput'),editSaveBtn=
 const toast=$('toast'),previewWrap=$('previewWrap');
 const camModal=$('camModal'),camVideo=$('camVideo'),camCancel=$('camCancel'),camFlip=$('camFlip'),captureBtn=$('captureBtn');
 const zoomSlider=$('zoomSlider'),zoomLbl=$('zoomLbl'),zoomOut=$('zoomOut'),zoomIn=$('zoomIn');
+const camFlash=$('camFlash');
+const confirmModal=$('confirmModal'),confirmBg=$('confirmBg'),confirmTitle=$('confirmTitle'),confirmMsg=$('confirmMsg'),confirmCancelBtn=$('confirmCancelBtn'),confirmOkBtn=$('confirmOkBtn');
 
 // ── State ────────────────────────────────────────────
 let currentPhoto=null,allPhotos=[],modalPhoto=null,editingPhoto=null;
 let cameraStream=null,facingMode='environment';
 let currentZoom=1,zoomHardware=false,zoomCapMin=1,zoomCapMax=5;
 let pinchDist0=0,pinchZoom0=1;
+let torchSupported=false,torchOn=false;
+let confirmCallback=null;
 
 // ── Câmera ───────────────────────────────────────────
 $('openCam').addEventListener('click',openCamera);
@@ -482,6 +524,10 @@ async function openCamera(){
     }
     zoomSlider.min=zoomCapMin; zoomSlider.max=zoomCapMax;
     applyZoom(zoomCapMin);
+    // detect flash/torch capability
+    torchOn=false; camFlash.classList.remove('active');
+    torchSupported=!!(caps&&caps.torch);
+    camFlash.style.display=torchSupported?'flex':'none';
     camModal.style.display='flex'; document.body.style.overflow='hidden';
   }catch(e){toast2('Câmera bloqueada. Verifique as permissões.','err');}
 }
@@ -500,9 +546,18 @@ function closeCamera(){
   cameraStream?.getTracks().forEach(t=>t.stop());
   cameraStream=null; camVideo.srcObject=null; camVideo.style.transform='none';
   camModal.style.display='none'; document.body.style.overflow='';
+  torchOn=false; camFlash.classList.remove('active');
 }
 camCancel.addEventListener('click',closeCamera);
 camFlip.addEventListener('click',async()=>{facingMode=facingMode==='environment'?'user':'environment';closeCamera();await openCamera();});
+camFlash.addEventListener('click',async()=>{
+  if(!torchSupported||!cameraStream)return;
+  const wanted=!torchOn;
+  try{
+    await cameraStream.getVideoTracks()[0].applyConstraints({advanced:[{torch:wanted}]});
+    torchOn=wanted; camFlash.classList.toggle('active',torchOn);
+  }catch(e){toast2('Não foi possível ligar o flash.','err');}
+});
 
 // zoom controls
 zoomSlider.addEventListener('input',()=>applyZoom(zoomSlider.value));
@@ -517,12 +572,40 @@ camVwrap.addEventListener('touchmove',e=>{if(e.touches.length===2){e.preventDefa
 // scroll wheel zoom (desktop)
 camVwrap.addEventListener('wheel',e=>{e.preventDefault();applyZoom(currentZoom+(e.deltaY<0?0.2:-0.2));},{passive:false});
 
+// ── Nitidez leve (sharpen) ────────────────────────────
+// Convolução 3x3 simples aplicada uma única vez sobre a foto capturada.
+// É rápida (roda em poucas dezenas de ms mesmo em celulares médios) e não
+// tem custo nenhum na pré-visualização ao vivo da câmera.
+function sharpenCanvas(ctx,w,h,amount){
+  amount=amount||0.45;
+  let imgData;
+  try{imgData=ctx.getImageData(0,0,w,h);}catch(e){return;}
+  const d=imgData.data;
+  const out=new Uint8ClampedArray(d.length);
+  const w4=w*4;
+  for(let i=0;i<d.length;i++)out[i]=d[i];
+  for(let y=1;y<h-1;y++){
+    let rowIdx=y*w4;
+    for(let x=1;x<w-1;x++){
+      const i=rowIdx+x*4;
+      for(let c=0;c<3;c++){
+        const idx=i+c;
+        const center=d[idx];
+        const lap=4*center-d[idx-4]-d[idx+4]-d[idx-w4]-d[idx+w4];
+        out[idx]=center+amount*lap;
+      }
+    }
+  }
+  ctx.putImageData(new ImageData(out,w,h),0,0);
+}
+
 captureBtn.addEventListener('click',()=>{
   if(!camVideo.videoWidth)return;
   const c=document.createElement('canvas');
   c.width=camVideo.videoWidth; c.height=camVideo.videoHeight;
   const ctx=c.getContext('2d');
   if(facingMode==='user'){ctx.translate(c.width,0);ctx.scale(-1,1);}
+  ctx.filter='contrast(1.1) saturate(1.12)';
   if(!zoomHardware&&currentZoom>1){
     // crop center to match what's visible on screen
     const sw=c.width/currentZoom, sh=c.height/currentZoom;
@@ -530,6 +613,8 @@ captureBtn.addEventListener('click',()=>{
   } else {
     ctx.drawImage(camVideo,0,0);
   }
+  ctx.filter='none';
+  sharpenCanvas(ctx,c.width,c.height);
   c.toBlob(blob=>{setPhoto({file:new File([blob],'camera.jpg',{type:'image/jpeg'}),dataUrl:c.toDataURL('image/jpeg',.85)});closeCamera();},'image/jpeg',.85);
 });
 
@@ -553,7 +638,11 @@ function clearPhoto(){
 }
 
 // ── Salvar ───────────────────────────────────────────
-dockInput.addEventListener('input',checkSave);
+function onlyDigits(el){
+  const cleaned=el.value.replace(/[^0-9]/g,'');
+  if(cleaned!==el.value)el.value=cleaned;
+}
+dockInput.addEventListener('input',()=>{onlyDigits(dockInput);checkSave();});
 function checkSave(){saveBtn.disabled=!(currentPhoto&&dockInput.value.trim());}
 
 saveBtn.addEventListener('click',async()=>{
@@ -662,13 +751,25 @@ function openModal(id){
 function closeModal(){modal.style.display='none';document.body.style.overflow='';modalImg.src='';modalPhoto=null;}
 modalClose.addEventListener('click',closeModal);
 modalBg.addEventListener('click',closeModal);
-document.addEventListener('keydown',e=>e.key==='Escape'&&(closeEditModal(),closeModal()));
+document.addEventListener('keydown',e=>e.key==='Escape'&&(closeEditModal(),closeModal(),hideConfirm()));
 modalDlBtn.addEventListener('click',()=>modalPhoto&&dlPhoto(modalPhoto));
 modalEditBtn.addEventListener('click',()=>{if(modalPhoto){closeModal();openEdit(modalPhoto.id);}});
 modalDelBtn.addEventListener('click',()=>{
   if(!modalPhoto)return;
-  if(confirm(`Apagar foto da ${modalPhoto.dockNumber}?`)){doDelete(modalPhoto.id);}
+  showConfirm('Apagar foto?',`Apagar a foto da doca ${modalPhoto.dockNumber}? Essa ação não pode ser desfeita.`,()=>doDelete(modalPhoto.id));
 });
+
+// ── Modal confirmar (substitui o confirm() nativo) ────
+function showConfirm(title,msg,cb){
+  confirmTitle.textContent=title; confirmMsg.textContent=msg; confirmCallback=cb;
+  confirmModal.style.display='flex'; document.body.style.overflow='hidden';
+}
+function hideConfirm(){
+  confirmModal.style.display='none'; document.body.style.overflow=''; confirmCallback=null;
+}
+confirmCancelBtn.addEventListener('click',hideConfirm);
+confirmBg.addEventListener('click',hideConfirm);
+confirmOkBtn.addEventListener('click',()=>{const cb=confirmCallback;hideConfirm();if(cb)cb();});
 
 // ── Modal editar ─────────────────────────────────────
 function openEdit(id){
@@ -694,6 +795,7 @@ editSaveBtn.addEventListener('click',async()=>{
   }catch(e){toast2('Erro ao salvar: '+e.message,'err');}
   editSaveBtn.disabled=false;
 });
+editDockInput.addEventListener('input',()=>onlyDigits(editDockInput));
 editDockInput.addEventListener('keydown',e=>e.key==='Enter'&&editSaveBtn.click());
 
 // ── Download foto ────────────────────────────────────
@@ -713,16 +815,17 @@ function toast2(msg,type='info'){
 }
 
 // ── Apagar tudo ──────────────────────────────────────
-delAllBtn.addEventListener('click',async()=>{
+delAllBtn.addEventListener('click',()=>{
   if(!allPhotos.length)return;
-  if(!confirm(`Apagar todas as ${allPhotos.length} foto${allPhotos.length!==1?'s':''}? Isso não pode ser desfeito.`))return;
-  delAllBtn.disabled=true;
-  try{
-    await dbDeleteAll();
-    await loadPhotos();
-    toast2('Todas as fotos apagadas!','ok');
-  }catch(e){toast2('Erro: '+e.message,'err');}
-  delAllBtn.disabled=false;
+  showConfirm('Apagar todas as fotos?',`Apagar todas as ${allPhotos.length} foto${allPhotos.length!==1?'s':''}? Essa ação não pode ser desfeita.`,async()=>{
+    delAllBtn.disabled=true;
+    try{
+      await dbDeleteAll();
+      await loadPhotos();
+      toast2('Todas as fotos apagadas!','ok');
+    }catch(e){toast2('Erro: '+e.message,'err');}
+    delAllBtn.disabled=false;
+  });
 });
 
 // ── Init ─────────────────────────────────────────────
