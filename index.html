@@ -416,8 +416,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <script>
 // ── Supabase Config ───────────────────────────────────
 // Preencha com suas credenciais: supabase.com → Settings → API
-const SUPABASE_URL = 'https://SEU_PROJETO.supabase.co';
-const SUPABASE_KEY = 'SUA_CHAVE_ANONIMA';
+const SUPABASE_URL = 'https://mbnlgzjjbhgcnrjutecs.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ibmxnempqYmhnY25yanV0ZWNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4MTcwNTQsImV4cCI6MjA5OTM5MzA1NH0.wkSPT6vXbiOZGRIe2dfnKIguljg4W7OJPwqKzTMeXbE';
 const BUCKET = 'fotos';
 const supa = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -781,6 +781,7 @@ delAllBtn.addEventListener('click',async()=>{
 
 // ── Init ─────────────────────────────────────────────
 loadPhotos();
+  supa.channel('fotos-realtime').on('postgres_changes',{event:'*',schema:'public',table:'fotos'},()=>{loadPhotos();}).subscribe();
 </script>
 </body>
 </html>
