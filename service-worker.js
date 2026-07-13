@@ -1,5 +1,5 @@
 // Service Worker — Fotos Doca (funciona offline)
-const CACHE = 'fotos-doca-v5';
+const CACHE = 'fotos-doca-v6';
 const ASSETS = [
   './',
   './index.html',

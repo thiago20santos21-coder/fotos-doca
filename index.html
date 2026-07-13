@@ -186,6 +186,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .toast.show{transform:translateX(-50%) translateY(0)}
 .toast.ok{background:var(--ok)}.toast.err{background:var(--acc)}.toast.info{background:var(--pri)}
 
+/* ABAS */
+.tabbar{position:fixed;bottom:0;left:0;right:0;z-index:500;display:flex;background:#fff;border-top:1px solid var(--bdr);box-shadow:0 -2px 12px rgba(0,0,0,.08);padding-bottom:env(safe-area-inset-bottom)}
+.tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 4px 11px;border:none;background:transparent;cursor:pointer;font-size:.72rem;font-weight:700;color:var(--txt3);font-family:inherit}
+.tab-btn.active{color:var(--pri)}
+body{padding-bottom:64px}
+
+/* CAMERA RAPIDA (aba) */
+.qc{position:fixed;top:0;left:0;right:0;bottom:58px;z-index:400;background:#000;display:none}
+.qc.active{display:block}
+#qcVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.qc-msg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;text-align:center;padding:24px;font-size:.92rem}
+.qc-ctrls{position:absolute;bottom:20px;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:34px;z-index:2}
+.qc-flip{color:#fff;background:rgba(255,255,255,.22);border:none;width:46px;height:46px;border-radius:50%;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.qc-sp{width:46px;height:46px}
+.qc-send{position:absolute;left:0;right:0;bottom:0;z-index:3;background:#fff;padding:10px 12px;display:none;align-items:center;gap:9px;box-shadow:0 -4px 20px rgba(0,0,0,.35);border-radius:14px 14px 0 0}
+.qc-send.show{display:flex}
+.qc-send img{width:54px;height:54px;object-fit:cover;border-radius:8px;background:#eee;flex-shrink:0}
+.qc-send input{flex:1;min-width:0;padding:12px 13px;border:2px solid var(--pri);border-radius:10px;font-size:1.05rem;font-weight:700;color:var(--txt);font-family:inherit}
+.qc-send input:focus{outline:none}
+.qc-enviar{background:linear-gradient(135deg,var(--ok),var(--ok-d));color:#fff;border:none;padding:13px 18px;border-radius:10px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0}
+.qc-enviar:disabled{opacity:.6}
+.qc-x{background:#eee;color:#666;border:none;width:40px;height:40px;border-radius:50%;font-size:15px;cursor:pointer;flex-shrink:0}
+
 @media(max-width:767px){
   .main{padding:8px;gap:10px;width:100%}
   .card,.gal-sec{padding:13px;width:100%;box-sizing:border-box}
@@ -447,6 +470,40 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     </div>
   </div>
 </div>
+
+<!-- ABA CAMERA RAPIDA -->
+<div class="qc" id="qcView">
+  <video id="qcVideo" autoplay playsinline muted></video>
+  <p class="qc-msg" id="qcMsg" style="display:none">Câmera indisponível.<br>Verifique as permissões do navegador.</p>
+  <div class="qc-ctrls" id="qcCtrls">
+    <button class="qc-flip" id="qcFlip">🔄</button>
+    <button class="shutter" id="qcShutter"><span class="shutter-in"></span></button>
+    <div class="qc-sp"></div>
+  </div>
+  <div class="qc-send" id="qcSendBar">
+    <img id="qcThumb" alt="Foto">
+    <input id="qcDock" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Nº da doca" autocomplete="off" enterkeyhint="send">
+    <button class="qc-enviar" id="qcEnviar">Enviar</button>
+    <button class="qc-x" id="qcX">✕</button>
+  </div>
+</div>
+
+<!-- BARRA DE ABAS -->
+<nav class="tabbar">
+  <button class="tab-btn" id="tabCam">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
+    </svg>
+    Câmera
+  </button>
+  <button class="tab-btn active" id="tabFotos">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+      <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+      <rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
+    </svg>
+    Fotos
+  </button>
+</nav>
 
 <!-- TOAST -->
 <div class="toast" id="toast" role="status"></div>
@@ -983,6 +1040,88 @@ delAllBtn.addEventListener('click',()=>{
     delAllBtn.disabled=false;
   });
 });
+
+// ── Abas + Câmera rápida ─────────────────────────────
+const qcView=$('qcView'),qcVideo=$('qcVideo'),qcMsg=$('qcMsg');
+const qcShutter=$('qcShutter'),qcFlip=$('qcFlip');
+const qcSendBar=$('qcSendBar'),qcThumb=$('qcThumb'),qcDock=$('qcDock'),qcEnviar=$('qcEnviar'),qcX=$('qcX');
+const tabCam=$('tabCam'),tabFotos=$('tabFotos');
+let qcStream=null,qcFacing='environment',qcFile=null,qcBusy=false;
+
+async function qcStart(){
+  qcStop();
+  try{
+    try{qcStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:qcFacing,width:{ideal:1920},height:{ideal:1080}},audio:false});}
+    catch{qcStream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});}
+    qcVideo.srcObject=qcStream;
+    qcVideo.style.transform=qcFacing==='user'?'scaleX(-1)':'none';
+    qcMsg.style.display='none';
+  }catch(e){qcMsg.style.display='flex';}
+}
+function qcStop(){qcStream?.getTracks().forEach(t=>t.stop());qcStream=null;qcVideo.srcObject=null;}
+
+function showTab(t){
+  if(t==='cam'){
+    qcView.classList.add('active');tabCam.classList.add('active');tabFotos.classList.remove('active');
+    document.body.style.overflow='hidden';
+    if(!qcStream)qcStart();
+  }else{
+    qcView.classList.remove('active');tabFotos.classList.add('active');tabCam.classList.remove('active');
+    document.body.style.overflow='';
+    qcStop();qcHideSend();
+  }
+}
+tabCam.addEventListener('click',()=>showTab('cam'));
+tabFotos.addEventListener('click',()=>showTab('fotos'));
+qcFlip.addEventListener('click',async()=>{qcFacing=qcFacing==='environment'?'user':'environment';await qcStart();});
+
+qcShutter.addEventListener('click',()=>{
+  if(!qcVideo.videoWidth)return;
+  const c=document.createElement('canvas');
+  c.width=qcVideo.videoWidth;c.height=qcVideo.videoHeight;
+  const ctx=c.getContext('2d');
+  if(qcFacing==='user'){ctx.translate(c.width,0);ctx.scale(-1,1);}
+  ctx.drawImage(qcVideo,0,0);
+  qcThumb.src=c.toDataURL('image/jpeg',.55);
+  qcFile=null;
+  c.toBlob(b=>{qcFile=new File([b],'camera.jpg',{type:'image/jpeg'});},'image/jpeg',.85);
+  qcSendBar.classList.add('show');
+  qcDock.value='';
+  qcDock.focus(); // abre o teclado na hora
+});
+function qcHideSend(){qcSendBar.classList.remove('show');qcFile=null;qcDock.blur();}
+qcX.addEventListener('click',qcHideSend);
+qcDock.addEventListener('input',()=>onlyDigits(qcDock));
+qcDock.addEventListener('keydown',e=>e.key==='Enter'&&qcEnviar.click());
+
+qcEnviar.addEventListener('click',async()=>{
+  const dock=qcDock.value.trim();
+  if(!dock){qcDock.focus();return;}
+  if(!qcFile||qcBusy)return;
+  qcBusy=true;qcEnviar.disabled=true;qcEnviar.textContent='…';
+  const now=new Date(),pad=n=>String(n).padStart(2,'0');
+  const stamp=`${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  const fileName=`DOCA-${dock}_${stamp}.jpg`;
+  const file=qcFile;
+  qcHideSend(); // volta direto para a câmera, que continua ativa
+  let ok=false;
+  if(navigator.onLine){
+    try{
+      await dbSave({dockNumber:dock,fileName,file,timestamp:now.getTime()});
+      ok=true;toast2(`Doca ${dock} salva!`,'ok');loadPhotos();
+    }catch(e){}
+  }
+  if(!ok){
+    try{
+      await ldbAdd({dockNumber:dock,fileName,blob:file,timestamp:now.getTime()});
+      toast2('Sem internet: foto guardada e será enviada ao conectar.','info');loadPhotos();
+    }catch(e){toast2('Erro: '+e.message,'err');}
+  }
+  qcBusy=false;qcEnviar.disabled=false;qcEnviar.textContent='Enviar';
+});
+
+// instalado como app: abre direto na câmera
+if(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone){showTab('cam');}
 
 // ── Init ─────────────────────────────────────────────
 updateConnBadge();
