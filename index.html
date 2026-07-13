@@ -596,6 +596,9 @@ if('serviceWorker' in navigator){
   navigator.serviceWorker.register('./service-worker.js').catch(()=>{});
 }
 let deferredPWA=null;
+const _iBtn=document.getElementById('installAppBtn');
+if(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone){_iBtn.style.display='none';}
+window.addEventListener('appinstalled',()=>{_iBtn.style.display='none';deferredPWA=null;});
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPWA=e;});
 document.getElementById('installAppBtn').addEventListener('click',async()=>{
   if(deferredPWA){
