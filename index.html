@@ -200,6 +200,9 @@ body{padding-bottom:64px}
 .qc-ctrls{position:absolute;bottom:20px;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:34px;z-index:2}
 .qc-flip{color:#fff;background:rgba(255,255,255,.22);border:none;width:46px;height:46px;border-radius:50%;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .qc-sp{width:46px;height:46px}
+.qc-zoom{position:absolute;bottom:118px;left:0;right:0;z-index:2;display:flex;align-items:center;gap:10px;max-width:320px;margin:0 auto;padding:0 24px}
+.qc-flash{position:absolute;top:14px;right:14px;z-index:2;color:#fff;background:rgba(255,255,255,.22);border:none;width:46px;height:46px;border-radius:50%;font-size:1.25rem;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.qc-flash.on{background:#FFE600;color:#000}
 .qc-send{position:absolute;left:0;right:0;bottom:0;z-index:3;background:#fff;padding:10px 12px;display:none;align-items:center;gap:9px;box-shadow:0 -4px 20px rgba(0,0,0,.35);border-radius:14px 14px 0 0}
 .qc-send.show{display:flex}
 .qc-send img{width:54px;height:54px;object-fit:cover;border-radius:8px;background:#eee;flex-shrink:0}
@@ -475,10 +478,24 @@ body{padding-bottom:64px}
 <div class="qc" id="qcView">
   <video id="qcVideo" autoplay playsinline muted></video>
   <p class="qc-msg" id="qcMsg" style="display:none">Câmera indisponível.<br>Verifique as permissões do navegador.</p>
+  <input type="file" id="qcGalInput" accept="image/*" style="display:none">
+  <button class="qc-flash" id="qcFlash" style="display:none" title="Flash">⚡</button>
+  <div class="qc-zoom" id="qcZoomWrap">
+    <button class="zoom-btn" id="qcZoomOut">−</button>
+    <input class="zoom-slider" type="range" id="qcZoomSlider" min="1" max="5" step="0.1" value="1">
+    <button class="zoom-btn" id="qcZoomIn">+</button>
+    <span class="zoom-lbl" id="qcZoomLbl">1×</span>
+  </div>
   <div class="qc-ctrls" id="qcCtrls">
-    <button class="qc-flip" id="qcFlip">🔄</button>
+    <button class="qc-flip" id="qcGal" title="Galeria">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/>
+        <polyline points="21 15 16 10 5 21"/>
+      </svg>
+    </button>
     <button class="shutter" id="qcShutter"><span class="shutter-in"></span></button>
-    <div class="qc-sp"></div>
+    <button class="qc-flip" id="qcFlip">🔄</button>
   </div>
   <div class="qc-send" id="qcSendBar">
     <img id="qcThumb" alt="Foto">
@@ -1047,6 +1064,9 @@ const qcShutter=$('qcShutter'),qcFlip=$('qcFlip');
 const qcSendBar=$('qcSendBar'),qcThumb=$('qcThumb'),qcDock=$('qcDock'),qcEnviar=$('qcEnviar'),qcX=$('qcX');
 const tabCam=$('tabCam'),tabFotos=$('tabFotos');
 let qcStream=null,qcFacing='environment',qcFile=null,qcBusy=false;
+const qcGal=$('qcGal'),qcGalInput=$('qcGalInput'),qcFlash=$('qcFlash');
+const qcZoomSlider=$('qcZoomSlider'),qcZoomLbl=$('qcZoomLbl'),qcZoomOut=$('qcZoomOut'),qcZoomIn=$('qcZoomIn');
+let qcZoom=1,qcZoomHw=false,qcZMin=1,qcZMax=5,qcTorch=false,qcPinch0=0,qcPinchZ0=1;
 
 async function qcStart(){
   qcStop();
@@ -1054,10 +1074,56 @@ async function qcStart(){
     try{qcStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:qcFacing,width:{ideal:1920},height:{ideal:1080}},audio:false});}
     catch{qcStream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});}
     qcVideo.srcObject=qcStream;
-    qcVideo.style.transform=qcFacing==='user'?'scaleX(-1)':'none';
     qcMsg.style.display='none';
+    // zoom (usa o da lente se o aparelho tiver, senão zoom digital)
+    const track=qcStream.getVideoTracks()[0];
+    const caps=track.getCapabilities?.()||{};
+    if(caps.zoom){qcZoomHw=true;qcZMin=caps.zoom.min;qcZMax=caps.zoom.max;qcZoomSlider.step=caps.zoom.step||0.1;}
+    else{qcZoomHw=false;qcZMin=1;qcZMax=5;qcZoomSlider.step=0.1;}
+    qcZoomSlider.min=qcZMin;qcZoomSlider.max=qcZMax;
+    qcApplyZoom(qcZMin);
+    // flash (lanterna) so aparece se o aparelho suportar
+    qcTorch=false;qcFlash.classList.remove('on');
+    qcFlash.style.display=caps.torch?'flex':'none';
   }catch(e){qcMsg.style.display='flex';}
 }
+function qcApplyZoom(z){
+  qcZoom=Math.max(qcZMin,Math.min(qcZMax,+z||1));
+  qcZoomSlider.value=qcZoom;
+  qcZoomLbl.textContent=qcZoom.toFixed(1).replace(/\.0$/,'')+'×';
+  const flip=qcFacing==='user'?' scaleX(-1)':'';
+  if(qcZoomHw){
+    qcStream?.getVideoTracks()[0]?.applyConstraints({advanced:[{zoom:qcZoom}]});
+    qcVideo.style.transform=flip||'none';
+  }else{
+    qcVideo.style.transform=`scale(${qcZoom})`+flip;
+  }
+}
+qcZoomSlider.addEventListener('input',()=>qcApplyZoom(qcZoomSlider.value));
+qcZoomOut.addEventListener('click',()=>qcApplyZoom(qcZoom-(qcZMax-qcZMin)/10));
+qcZoomIn.addEventListener('click',()=>qcApplyZoom(qcZoom+(qcZMax-qcZMin)/10));
+qcVideo.addEventListener('touchstart',e=>{if(e.touches.length===2){e.preventDefault();qcPinch0=Math.hypot(e.touches[1].clientX-e.touches[0].clientX,e.touches[1].clientY-e.touches[0].clientY);qcPinchZ0=qcZoom;}},{passive:false});
+qcVideo.addEventListener('touchmove',e=>{if(e.touches.length===2){e.preventDefault();const d=Math.hypot(e.touches[1].clientX-e.touches[0].clientX,e.touches[1].clientY-e.touches[0].clientY);qcApplyZoom(qcPinchZ0*d/qcPinch0);}},{passive:false});
+qcVideo.addEventListener('wheel',e=>{e.preventDefault();qcApplyZoom(qcZoom+(e.deltaY<0?0.2:-0.2));},{passive:false});
+qcFlash.addEventListener('click',async()=>{
+  const track=qcStream?.getVideoTracks()[0]; if(!track)return;
+  qcTorch=!qcTorch;
+  try{await track.applyConstraints({advanced:[{torch:qcTorch}]});qcFlash.classList.toggle('on',qcTorch);}
+  catch(e){qcTorch=false;qcFlash.classList.remove('on');toast2('Flash não suportado neste aparelho.','err');}
+});
+qcGal.addEventListener('click',()=>qcGalInput.click());
+qcGalInput.addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    qcThumb.src=ev.target.result;
+    qcFile=f;
+    qcSendBar.classList.add('show');
+    qcDock.value='';
+    qcDock.focus();
+  };
+  r.readAsDataURL(f); e.target.value='';
+});
 function qcStop(){qcStream?.getTracks().forEach(t=>t.stop());qcStream=null;qcVideo.srcObject=null;}
 
 function showTab(t){
@@ -1081,7 +1147,12 @@ qcShutter.addEventListener('click',()=>{
   c.width=qcVideo.videoWidth;c.height=qcVideo.videoHeight;
   const ctx=c.getContext('2d');
   if(qcFacing==='user'){ctx.translate(c.width,0);ctx.scale(-1,1);}
-  ctx.drawImage(qcVideo,0,0);
+  if(!qcZoomHw&&qcZoom>1){
+    const sw=c.width/qcZoom,sh=c.height/qcZoom;
+    ctx.drawImage(qcVideo,(c.width-sw)/2,(c.height-sh)/2,sw,sh,0,0,c.width,c.height);
+  }else{
+    ctx.drawImage(qcVideo,0,0);
+  }
   qcThumb.src=c.toDataURL('image/jpeg',.55);
   qcFile=null;
   c.toBlob(b=>{qcFile=new File([b],'camera.jpg',{type:'image/jpeg'});},'image/jpeg',.85);
