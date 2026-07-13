@@ -12,6 +12,7 @@
 <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
 <link rel="apple-touch-icon" href="icons/icon.svg">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 :root{
@@ -92,6 +93,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .btn-del-all{display:flex;align-items:center;gap:5px;background:#fdeaea;color:var(--acc);border:1.5px solid #f6c6c6;padding:7px 11px;border-radius:var(--rs);cursor:pointer;font-size:.76rem;font-weight:600;white-space:nowrap;transition:background .15s,color .15s;font-family:inherit}
 .btn-del-all:hover{background:var(--acc);color:#fff}
 .btn-del-all:disabled{opacity:.4;cursor:not-allowed}
+.btn-zip{display:flex;align-items:center;gap:5px;background:#EAF3FF;color:var(--pri);border:1.5px solid #bcd7fb;padding:7px 11px;border-radius:var(--rs);cursor:pointer;font-size:.76rem;font-weight:600;white-space:nowrap;transition:background .15s,color .15s;font-family:inherit}
+.btn-zip:hover{background:var(--pri);color:#fff}
+.btn-zip:disabled{opacity:.4;cursor:not-allowed}
+
+/* VISUALIZADOR TELA CHEIA */
+.fsv{position:fixed;inset:0;z-index:3000;background:#000;display:none;overflow:hidden;touch-action:none}
+.fsv.show{display:block}
+.fsv img{position:absolute;top:0;left:0;right:0;bottom:0;margin:auto;max-width:100%;max-height:100%;transform-origin:center center;user-select:none;-webkit-user-drag:none}
+.fsv-x{position:fixed;top:14px;right:14px;z-index:2;background:rgba(255,255,255,.22);color:#fff;border:none;width:42px;height:42px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.fsv-hint{position:fixed;bottom:16px;left:0;right:0;text-align:center;color:rgba(255,255,255,.55);font-size:.75rem;pointer-events:none}
+.miw img{cursor:zoom-in}
 
 /* STATES */
 .loading,.empty{display:flex;flex-direction:column;align-items:center;padding:38px;gap:13px;color:var(--txt3);font-size:.88rem;text-align:center}
@@ -333,6 +345,12 @@ body{padding-bottom:64px}
       <div class="gal-ctrl">
         <input type="search" class="srch" id="searchInput" placeholder="Buscar por doca…">
         <span class="cnt" id="cntBadge">0 fotos</span>
+        <button class="btn-zip" id="zipBtn" title="Baixar todas as fotos em ZIP">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          ZIP
+        </button>
         <button class="btn-del-all" id="delAllBtn" title="Apagar todas as fotos">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
             <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
@@ -508,6 +526,13 @@ body{padding-bottom:64px}
     Fotos
   </button>
 </nav>
+
+<!-- VISUALIZADOR TELA CHEIA -->
+<div class="fsv" id="fsv">
+  <img id="fsvImg" alt="Foto ampliada">
+  <button class="fsv-x" id="fsvX">✕</button>
+  <p class="fsv-hint">Pinça ou toque duplo para ampliar • arraste para mover</p>
+</div>
 
 <!-- TOAST -->
 <div class="toast" id="toast" role="status"></div>
@@ -824,16 +849,18 @@ saveBtn.addEventListener('click',async()=>{
   const fileName=`DOCA-${dock}_${stamp}.jpg`;
   saveBtn.disabled=true; progWrap.style.display='block';
   progFill.style.width='40%'; progLbl.textContent='Salvando…';
+  let upFile=currentPhoto.file;
+  try{upFile=await stampPhoto(currentPhoto.file,dock,now);}catch(e){}
   if(navigator.onLine){
     try{
-      await dbSave({dockNumber:dock,fileName,file:currentPhoto.file,timestamp:now.getTime()});
+      await dbSave({dockNumber:dock,fileName,file:upFile,timestamp:now.getTime()});
       progFill.style.width='100%'; progLbl.textContent='Salvo!';
       resetSave();clearPhoto();dockInput.value='';loadPhotos();toast2('Foto salva!','ok');
       return;
     }catch(e){/* sem sinal de internet de verdade: guarda offline abaixo */}
   }
   try{
-    await ldbAdd({dockNumber:dock,fileName,blob:currentPhoto.file,timestamp:now.getTime()});
+    await ldbAdd({dockNumber:dock,fileName,blob:upFile,timestamp:now.getTime()});
     progFill.style.width='100%'; progLbl.textContent='Salvo (offline)';
     resetSave();clearPhoto();dockInput.value='';loadPhotos();
     toast2('Sem internet: foto guardada no aparelho e será enviada ao conectar.','info');
@@ -946,7 +973,7 @@ function openModal(id){
 function closeModal(){modal.style.display='none';document.body.style.overflow='';modalImg.src='';modalPhoto=null;}
 modalClose.addEventListener('click',closeModal);
 modalBg.addEventListener('click',closeModal);
-document.addEventListener('keydown',e=>e.key==='Escape'&&(closeEditModal(),closeModal(),hideConfirm()));
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(fsv.classList.contains('show')){closeFsv();return;}closeEditModal();closeModal();hideConfirm();});
 modalDlBtn.addEventListener('click',()=>modalPhoto&&dlPhoto(modalPhoto));
 modalEditBtn.addEventListener('click',()=>{if(modalPhoto){closeModal();openEdit(modalPhoto.id);}});
 modalDelBtn.addEventListener('click',()=>{
@@ -1043,6 +1070,125 @@ delAllBtn.addEventListener('click',()=>{
     delAllBtn.disabled=false;
   });
 });
+
+// ── Carimbo na foto (doca + data/hora gravados na imagem) ──
+function stampPhoto(file,dock,when){
+  return new Promise(resolve=>{
+    const img=new Image();
+    const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      try{
+        const c=document.createElement('canvas');
+        c.width=img.naturalWidth;c.height=img.naturalHeight;
+        const ctx=c.getContext('2d');
+        ctx.drawImage(img,0,0);
+        const pd=n=>String(n).padStart(2,'0');
+        const txt=`DOCA ${dock}  •  ${pd(when.getDate())}/${pd(when.getMonth()+1)}/${when.getFullYear()} ${pd(when.getHours())}:${pd(when.getMinutes())}`;
+        const fs=Math.max(20,Math.round(Math.min(c.width,c.height)*0.045));
+        const bh=Math.round(fs*1.9);
+        ctx.fillStyle='rgba(0,0,0,.55)';
+        ctx.fillRect(0,c.height-bh,c.width,bh);
+        ctx.fillStyle='#FFE600';
+        ctx.font=`bold ${fs}px Arial,sans-serif`;
+        ctx.textBaseline='middle';
+        ctx.fillText(txt,Math.round(fs*.6),c.height-bh/2);
+        URL.revokeObjectURL(url);
+        c.toBlob(b=>resolve(b?new File([b],file.name||'foto.jpg',{type:'image/jpeg'}):file),'image/jpeg',.85);
+      }catch(e){URL.revokeObjectURL(url);resolve(file);}
+    };
+    img.onerror=()=>{URL.revokeObjectURL(url);resolve(file);};
+    img.src=url;
+  });
+}
+
+// ── Baixar tudo em ZIP (cada foto com o numero da doca) ──
+const zipBtn=$('zipBtn');
+zipBtn.addEventListener('click',async()=>{
+  if(!allPhotos.length){toast2('Nenhuma foto para baixar.','info');return;}
+  zipBtn.disabled=true; toast2('Gerando ZIP…','info');
+  try{
+    const zip=new JSZip();
+    const cnt={};
+    let ok=0;
+    for(const p of allPhotos){
+      try{
+        const res=await fetch(p.url); if(!res.ok)continue;
+        const blob=await res.blob();
+        const dock=String(p.dockNumber).trim().replace(/[\\/:*?"<>|\s]+/g,'-');
+        cnt[dock]=(cnt[dock]||0)+1;
+        const name=cnt[dock]===1?`DOCA-${dock}.jpg`:`DOCA-${dock}-${cnt[dock]}.jpg`;
+        zip.file(name,blob); ok++;
+      }catch(e){}
+    }
+    if(!ok)throw new Error('nenhuma foto baixada');
+    const out=await zip.generateAsync({type:'blob'});
+    const d=new Date(),pd=n=>String(n).padStart(2,'0');
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(out);
+    a.download=`fotos-doca_${pd(d.getDate())}-${pd(d.getMonth()+1)}-${d.getFullYear()}.zip`;
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(a.href),15000);
+    toast2(`ZIP com ${ok} foto${ok>1?'s':''} baixado!`,'ok');
+  }catch(e){toast2('Erro no ZIP: '+e.message,'err');}
+  zipBtn.disabled=false;
+});
+
+// ── Limpeza automática: todo dia às 6h apaga as fotos antigas ──
+async function autoClean(){
+  if(!navigator.onLine)return;
+  const now=new Date();
+  const cutoff=new Date(now); cutoff.setHours(6,0,0,0);
+  if(now<cutoff) cutoff.setDate(cutoff.getDate()-1);
+  const last=+localStorage.getItem('lastClean6h')||0;
+  if(last>=cutoff.getTime())return;
+  try{
+    const {data:rows}=await supa.from('fotos').select('file_name').lt('timestamp',cutoff.getTime());
+    if(rows&&rows.length){
+      await supa.storage.from(BUCKET).remove(rows.map(r=>r.file_name));
+      await supa.from('fotos').delete().lt('timestamp',cutoff.getTime());
+      toast2(`Limpeza das 6h: ${rows.length} foto${rows.length>1?'s':''} apagada${rows.length>1?'s':''}.`,'info');
+      loadPhotos();
+    }
+    localStorage.setItem('lastClean6h',String(cutoff.getTime()));
+  }catch(e){}
+}
+setTimeout(autoClean,3000);
+setInterval(autoClean,10*60*1000);
+
+// ── Visualizador tela cheia com zoom ──
+const fsv=$('fsv'),fsvImg=$('fsvImg'),fsvX=$('fsvX');
+let fz=1,fx=0,fy=0,fLast=null,fPinch0=0,fPz0=1,fTapT=0,fMDown=null;
+function fsvApply(){fsvImg.style.transform=`translate(${fx}px,${fy}px) scale(${fz})`;}
+function openFsv(url){fsvImg.src=url;fz=1;fx=0;fy=0;fsvApply();fsv.classList.add('show');}
+function closeFsv(){fsv.classList.remove('show');fsvImg.src='';}
+fsvX.addEventListener('click',closeFsv);
+modalImg.addEventListener('click',()=>modalPhoto&&openFsv(modalPhoto.url));
+fsv.addEventListener('touchstart',e=>{
+  if(e.touches.length===2){
+    fPinch0=Math.hypot(e.touches[1].clientX-e.touches[0].clientX,e.touches[1].clientY-e.touches[0].clientY);fPz0=fz;
+  }else if(e.touches.length===1){
+    const t=Date.now();
+    if(t-fTapT<300){fz=fz>1?1:2.5;if(fz===1){fx=0;fy=0;}fsvApply();}
+    fTapT=t;
+    fLast={x:e.touches[0].clientX,y:e.touches[0].clientY};
+  }
+},{passive:false});
+fsv.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(e.touches.length===2){
+    const d=Math.hypot(e.touches[1].clientX-e.touches[0].clientX,e.touches[1].clientY-e.touches[0].clientY);
+    fz=Math.max(1,Math.min(6,fPz0*d/fPinch0));fsvApply();
+  }else if(e.touches.length===1&&fLast&&fz>1){
+    fx+=e.touches[0].clientX-fLast.x;fy+=e.touches[0].clientY-fLast.y;
+    fLast={x:e.touches[0].clientX,y:e.touches[0].clientY};fsvApply();
+  }
+},{passive:false});
+fsv.addEventListener('touchend',e=>{if(!e.touches.length)fLast=null;if(fz===1){fx=0;fy=0;fsvApply();}});
+fsv.addEventListener('wheel',e=>{e.preventDefault();fz=Math.max(1,Math.min(6,fz+(e.deltaY<0?0.3:-0.3)));if(fz===1){fx=0;fy=0;}fsvApply();},{passive:false});
+fsv.addEventListener('dblclick',()=>{fz=fz>1?1:2.5;if(fz===1){fx=0;fy=0;}fsvApply();});
+fsv.addEventListener('mousedown',e=>{if(fz>1)fMDown={x:e.clientX,y:e.clientY};});
+fsv.addEventListener('mousemove',e=>{if(fMDown){fx+=e.clientX-fMDown.x;fy+=e.clientY-fMDown.y;fMDown={x:e.clientX,y:e.clientY};fsvApply();}});
+window.addEventListener('mouseup',()=>fMDown=null);
 
 // ── Abas + Câmera rápida ─────────────────────────────
 const qcView=$('qcView'),qcVideo=$('qcVideo'),qcMsg=$('qcMsg');
@@ -1149,16 +1295,18 @@ qcEnviar.addEventListener('click',async()=>{
   const fileName=`DOCA-${dock}_${stamp}.jpg`;
   const file=qcFile;
   qcHideSend(); // volta direto para a câmera, que continua ativa
+  let upFile=file;
+  try{upFile=await stampPhoto(file,dock,now);}catch(e){}
   let ok=false;
   if(navigator.onLine){
     try{
-      await dbSave({dockNumber:dock,fileName,file,timestamp:now.getTime()});
+      await dbSave({dockNumber:dock,fileName,file:upFile,timestamp:now.getTime()});
       ok=true;toast2(`Doca ${dock} salva!`,'ok');loadPhotos();
     }catch(e){}
   }
   if(!ok){
     try{
-      await ldbAdd({dockNumber:dock,fileName,blob:file,timestamp:now.getTime()});
+      await ldbAdd({dockNumber:dock,fileName,blob:upFile,timestamp:now.getTime()});
       toast2('Sem internet: foto guardada e será enviada ao conectar.','info');loadPhotos();
     }catch(e){toast2('Erro: '+e.message,'err');}
   }

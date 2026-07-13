@@ -1,11 +1,12 @@
 // Service Worker — Fotos Doca (funciona offline)
-const CACHE = 'fotos-doca-v8';
+const CACHE = 'fotos-doca-v9';
 const ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './icons/icon.svg',
-  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js'
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js',
+  'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js'
 ];
 
 self.addEventListener('install', e => {
