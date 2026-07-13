@@ -285,13 +285,7 @@ body{padding-bottom:64px}
     <input type="file" id="camInput" accept="image/*" capture="environment" style="display:none">
     <input type="file" id="galInput" accept="image/*" style="display:none">
 
-    <div class="cam-btns">
-      <button class="btn btn-pri" id="openCam">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
-        </svg>
-        Câmera
-      </button>
+    <div class="cam-btns" style="grid-template-columns:1fr">
       <button class="btn btn-sec" id="openGal">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
           <rect x="3" y="3" width="18" height="18" rx="2"/>
@@ -478,7 +472,6 @@ body{padding-bottom:64px}
 <div class="qc" id="qcView">
   <video id="qcVideo" autoplay playsinline muted></video>
   <p class="qc-msg" id="qcMsg" style="display:none">Câmera indisponível.<br>Verifique as permissões do navegador.</p>
-  <input type="file" id="qcGalInput" accept="image/*" style="display:none">
   <button class="qc-flash" id="qcFlash" style="display:none" title="Flash">⚡</button>
   <div class="qc-zoom" id="qcZoomWrap">
     <button class="zoom-btn" id="qcZoomOut">−</button>
@@ -487,13 +480,7 @@ body{padding-bottom:64px}
     <span class="zoom-lbl" id="qcZoomLbl">1×</span>
   </div>
   <div class="qc-ctrls" id="qcCtrls">
-    <button class="qc-flip" id="qcGal" title="Galeria">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
-        <rect x="3" y="3" width="18" height="18" rx="2"/>
-        <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/>
-        <polyline points="21 15 16 10 5 21"/>
-      </svg>
-    </button>
+    <div class="qc-sp"></div>
     <button class="shutter" id="qcShutter"><span class="shutter-in"></span></button>
     <button class="qc-flip" id="qcFlip">🔄</button>
   </div>
@@ -688,7 +675,6 @@ document.getElementById('installAppBtn').addEventListener('click',async()=>{
 });
 
 // ── Câmera ───────────────────────────────────────────
-$('openCam').addEventListener('click',openCamera);
 $('openGal').addEventListener('click',()=>galInput.click());
 galInput.addEventListener('change',onFile);
 
@@ -1064,7 +1050,7 @@ const qcShutter=$('qcShutter'),qcFlip=$('qcFlip');
 const qcSendBar=$('qcSendBar'),qcThumb=$('qcThumb'),qcDock=$('qcDock'),qcEnviar=$('qcEnviar'),qcX=$('qcX');
 const tabCam=$('tabCam'),tabFotos=$('tabFotos');
 let qcStream=null,qcFacing='environment',qcFile=null,qcBusy=false;
-const qcGal=$('qcGal'),qcGalInput=$('qcGalInput'),qcFlash=$('qcFlash');
+const qcFlash=$('qcFlash');
 const qcZoomSlider=$('qcZoomSlider'),qcZoomLbl=$('qcZoomLbl'),qcZoomOut=$('qcZoomOut'),qcZoomIn=$('qcZoomIn');
 let qcZoom=1,qcZoomHw=false,qcZMin=1,qcZMax=5,qcTorch=false,qcPinch0=0,qcPinchZ0=1;
 
@@ -1111,19 +1097,7 @@ qcFlash.addEventListener('click',async()=>{
   try{await track.applyConstraints({advanced:[{torch:qcTorch}]});qcFlash.classList.toggle('on',qcTorch);}
   catch(e){qcTorch=false;qcFlash.classList.remove('on');toast2('Flash não suportado neste aparelho.','err');}
 });
-qcGal.addEventListener('click',()=>qcGalInput.click());
-qcGalInput.addEventListener('change',e=>{
-  const f=e.target.files[0]; if(!f)return;
-  const r=new FileReader();
-  r.onload=ev=>{
-    qcThumb.src=ev.target.result;
-    qcFile=f;
-    qcSendBar.classList.add('show');
-    qcDock.value='';
-    qcDock.focus();
-  };
-  r.readAsDataURL(f); e.target.value='';
-});
+
 function qcStop(){qcStream?.getTracks().forEach(t=>t.stop());qcStream=null;qcVideo.srcObject=null;}
 
 function showTab(t){
