@@ -491,16 +491,20 @@ body{padding-bottom:64px}
 
 <!-- ABA CAMERA RAPIDA -->
 <div class="qc" id="qcView">
-  <div class="qc-home">
-    <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="1.6" stroke-linecap="round">
-      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-      <circle cx="12" cy="13" r="4"/>
-    </svg>
-    <p>Toque no botão para abrir<br>a câmera do celular</p>
-    <button class="shutter" id="qcShutter"><span class="shutter-in"></span></button>
-    <small>A foto usa a câmera padrão do aparelho,<br>com foco automático e qualidade total</small>
+  <video id="qcVideo" autoplay playsinline muted></video>
+  <p class="qc-msg" id="qcMsg" style="display:none">Câmera indisponível.<br>Verifique as permissões do navegador.</p>
+  <button class="qc-flash" id="qcFlash" style="display:none" title="Flash">⚡</button>
+  <div class="qc-zoom" id="qcZoomWrap">
+    <button class="zoom-btn" id="qcZoomOut">−</button>
+    <input class="zoom-slider" type="range" id="qcZoomSlider" min="1" max="5" step="0.1" value="1">
+    <button class="zoom-btn" id="qcZoomIn">+</button>
+    <span class="zoom-lbl" id="qcZoomLbl">1×</span>
   </div>
-  <input type="file" id="qcCapInput" accept="image/*" capture="environment" style="display:none">
+  <div class="qc-ctrls" id="qcCtrls">
+    <div class="qc-sp"></div>
+    <button class="shutter" id="qcShutter"><span class="shutter-in"></span></button>
+    <button class="qc-flip" id="qcFlip">🔄</button>
+  </div>
   <div class="qc-send" id="qcSendBar">
     <img id="qcThumb" alt="Foto">
     <input id="qcDock" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Nº da doca" autocomplete="off" enterkeyhint="send">
@@ -1191,38 +1195,121 @@ fsv.addEventListener('mousedown',e=>{if(fz>1)fMDown={x:e.clientX,y:e.clientY};})
 fsv.addEventListener('mousemove',e=>{if(fMDown){fx+=e.clientX-fMDown.x;fy+=e.clientY-fMDown.y;fMDown={x:e.clientX,y:e.clientY};fsvApply();}});
 window.addEventListener('mouseup',()=>fMDown=null);
 
-// ── Abas + Câmera nativa (app padrão do celular) ─────
-const qcView=$('qcView');
-const qcShutter=$('qcShutter'),qcCapInput=$('qcCapInput');
+// ── Abas + Câmera ao vivo (lente principal + foco contínuo) ─────
+const qcView=$('qcView'),qcVideo=$('qcVideo'),qcMsg=$('qcMsg');
+const qcShutter=$('qcShutter'),qcFlip=$('qcFlip'),qcFlash=$('qcFlash');
 const qcSendBar=$('qcSendBar'),qcThumb=$('qcThumb'),qcDock=$('qcDock'),qcEnviar=$('qcEnviar'),qcX=$('qcX');
+const qcZoomSlider=$('qcZoomSlider'),qcZoomLbl=$('qcZoomLbl'),qcZoomOut=$('qcZoomOut'),qcZoomIn=$('qcZoomIn');
 const tabCam=$('tabCam'),tabFotos=$('tabFotos');
-let qcFile=null,qcBusy=false;
+let qcStream=null,qcFacing='environment',qcFile=null,qcBusy=false,qcDeviceId=null;
+let qcZoom=1,qcZoomHw=false,qcZMin=1,qcZMax=5,qcTorch=false,qcPinch0=0,qcPinchZ0=1;
+
+// escolhe a camera traseira PRINCIPAL (evita ultrawide, macro, tele, depth)
+async function qcPickBackCamera(){
+  try{
+    const devs=await navigator.mediaDevices.enumerateDevices();
+    const cams=devs.filter(d=>d.kind==='videoinput');
+    const backs=cams.filter(d=>/back|tras|rear|environment/i.test(d.label));
+    if(!backs.length)return null;
+    const good=backs.filter(d=>!/ultra|wide|macro|tele|depth|zoom|0\.5/i.test(d.label));
+    return (good[0]||backs[0]).deviceId;
+  }catch(e){return null;}
+}
+
+async function qcStart(){
+  qcStop();
+  try{
+    let video;
+    if(qcFacing==='environment'&&qcDeviceId){
+      video={deviceId:{exact:qcDeviceId},width:{ideal:4096},height:{ideal:2160}};
+    }else{
+      video={facingMode:qcFacing,width:{ideal:4096},height:{ideal:2160}};
+    }
+    try{qcStream=await navigator.mediaDevices.getUserMedia({video,audio:false});}
+    catch{qcStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:qcFacing},audio:false});}
+    qcVideo.srcObject=qcStream;
+    qcMsg.style.display='none';
+    const track=qcStream.getVideoTracks()[0];
+    const caps=track.getCapabilities?.()||{};
+    // foco automático contínuo (conserta foto turva)
+    try{if(caps.focusMode&&caps.focusMode.includes('continuous')){await track.applyConstraints({advanced:[{focusMode:'continuous'}]});}}catch(e){}
+    // zoom da lente quando existir
+    if(caps.zoom){qcZoomHw=true;qcZMin=caps.zoom.min;qcZMax=caps.zoom.max;qcZoomSlider.step=caps.zoom.step||0.1;}
+    else{qcZoomHw=false;qcZMin=1;qcZMax=5;qcZoomSlider.step=0.1;}
+    qcZoomSlider.min=qcZMin;qcZoomSlider.max=qcZMax;
+    qcApplyZoom(qcZMin);
+    // flash
+    qcTorch=false;qcFlash.classList.remove('on');
+    qcFlash.style.display=caps.torch?'flex':'none';
+    // na primeira vez, confere se pegou a lente principal; se nao, troca
+    if(qcFacing==='environment'&&!qcDeviceId){
+      const best=await qcPickBackCamera();
+      const cur=track.getSettings?.().deviceId;
+      if(best&&cur&&best!==cur){qcDeviceId=best;return qcStart();}
+      qcDeviceId=cur||qcDeviceId;
+    }
+  }catch(e){qcMsg.style.display='flex';}
+}
+function qcStop(){qcStream?.getTracks().forEach(t=>t.stop());qcStream=null;qcVideo.srcObject=null;}
+
+function qcApplyZoom(z){
+  qcZoom=Math.max(qcZMin,Math.min(qcZMax,+z||1));
+  qcZoomSlider.value=qcZoom;
+  qcZoomLbl.textContent=qcZoom.toFixed(1).replace(/\.0$/,'')+'×';
+  const flip=qcFacing==='user'?' scaleX(-1)':'';
+  if(qcZoomHw){
+    qcStream?.getVideoTracks()[0]?.applyConstraints({advanced:[{zoom:qcZoom}]});
+    qcVideo.style.transform=flip||'none';
+  }else{
+    qcVideo.style.transform=`scale(${qcZoom})`+flip;
+  }
+}
+qcZoomSlider.addEventListener('input',()=>qcApplyZoom(qcZoomSlider.value));
+qcZoomOut.addEventListener('click',()=>qcApplyZoom(qcZoom-(qcZMax-qcZMin)/10));
+qcZoomIn.addEventListener('click',()=>qcApplyZoom(qcZoom+(qcZMax-qcZMin)/10));
+qcVideo.addEventListener('touchstart',e=>{if(e.touches.length===2){e.preventDefault();qcPinch0=Math.hypot(e.touches[1].clientX-e.touches[0].clientX,e.touches[1].clientY-e.touches[0].clientY);qcPinchZ0=qcZoom;}},{passive:false});
+qcVideo.addEventListener('touchmove',e=>{if(e.touches.length===2){e.preventDefault();const d=Math.hypot(e.touches[1].clientX-e.touches[0].clientX,e.touches[1].clientY-e.touches[0].clientY);qcApplyZoom(qcPinchZ0*d/qcPinch0);}},{passive:false});
+qcVideo.addEventListener('wheel',e=>{e.preventDefault();qcApplyZoom(qcZoom+(e.deltaY<0?0.2:-0.2));},{passive:false});
+qcFlash.addEventListener('click',async()=>{
+  const track=qcStream?.getVideoTracks()[0]; if(!track)return;
+  qcTorch=!qcTorch;
+  try{await track.applyConstraints({advanced:[{torch:qcTorch}]});qcFlash.classList.toggle('on',qcTorch);}
+  catch(e){qcTorch=false;qcFlash.classList.remove('on');toast2('Flash não suportado neste aparelho.','err');}
+});
+qcFlip.addEventListener('click',async()=>{qcFacing=qcFacing==='environment'?'user':'environment';await qcStart();});
 
 function showTab(t){
   if(t==='cam'){
     qcView.classList.add('active');tabCam.classList.add('active');tabFotos.classList.remove('active');
     document.body.style.overflow='hidden';
+    if(!qcStream)qcStart();
   }else{
     qcView.classList.remove('active');tabFotos.classList.add('active');tabCam.classList.remove('active');
     document.body.style.overflow='';
-    qcHideSend();
+    qcStop();qcHideSend();
   }
 }
 tabCam.addEventListener('click',()=>showTab('cam'));
 tabFotos.addEventListener('click',()=>showTab('fotos'));
 
-qcShutter.addEventListener('click',()=>qcCapInput.click());
-qcCapInput.addEventListener('change',e=>{
-  const f=e.target.files[0]; if(!f)return;
-  const r=new FileReader();
-  r.onload=ev=>{
-    qcThumb.src=ev.target.result;
-    qcFile=f;
-    qcSendBar.classList.add('show');
-    qcDock.value='';
-    setTimeout(()=>qcDock.focus(),150); // abre o teclado
-  };
-  r.readAsDataURL(f); e.target.value='';
+qcShutter.addEventListener('click',()=>{
+  if(!qcVideo.videoWidth)return;
+  const c=document.createElement('canvas');
+  c.width=qcVideo.videoWidth;c.height=qcVideo.videoHeight;
+  const ctx=c.getContext('2d');
+  if(qcFacing==='user'){ctx.translate(c.width,0);ctx.scale(-1,1);}
+  if(!qcZoomHw&&qcZoom>1){
+    const sw=c.width/qcZoom,sh=c.height/qcZoom;
+    ctx.drawImage(qcVideo,(c.width-sw)/2,(c.height-sh)/2,sw,sh,0,0,c.width,c.height);
+  }else{
+    ctx.drawImage(qcVideo,0,0);
+  }
+  qcThumb.src=c.toDataURL('image/jpeg',.55);
+  qcFile=null;
+  c.toBlob(b=>{qcFile=new File([b],'camera.jpg',{type:'image/jpeg'});},'image/jpeg',.92);
+  qcSendBar.classList.add('show');
+  qcDock.value='';
+  qcDock.focus(); // abre o teclado na hora
 });
 function qcHideSend(){qcSendBar.classList.remove('show');qcFile=null;qcDock.blur();}
 qcX.addEventListener('click',qcHideSend);
@@ -1238,7 +1325,7 @@ qcEnviar.addEventListener('click',async()=>{
   const stamp=`${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
   const fileName=`DOCA-${dock}_${stamp}.jpg`;
   const file=qcFile;
-  qcHideSend(); // ja libera para a proxima foto
+  qcHideSend(); // camera continua ativa para a proxima foto
   let upFile=file;
   try{upFile=await stampPhoto(file,dock,now);}catch(e){}
   let ok=false;
