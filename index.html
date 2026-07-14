@@ -1077,11 +1077,24 @@ function stampPhoto(file,dock,when){
     const url=URL.createObjectURL(file);
     img.onload=()=>{
       try{
-        const sc=Math.min(1,1920/Math.max(img.naturalWidth,img.naturalHeight));
+        // reducao de alta qualidade em etapas (mantem a nitidez da camera nativa)
+        const MAX=2560;
+        const sc=Math.min(1,MAX/Math.max(img.naturalWidth,img.naturalHeight));
+        const tw=Math.round(img.naturalWidth*sc),th=Math.round(img.naturalHeight*sc);
+        let src=img,sw=img.naturalWidth,sh=img.naturalHeight;
+        while(sw*0.5>tw){
+          const half=document.createElement('canvas');
+          half.width=Math.round(sw*0.5);half.height=Math.round(sh*0.5);
+          const hctx=half.getContext('2d');
+          hctx.imageSmoothingEnabled=true;hctx.imageSmoothingQuality='high';
+          hctx.drawImage(src,0,0,half.width,half.height);
+          src=half;sw=half.width;sh=half.height;
+        }
         const c=document.createElement('canvas');
-        c.width=Math.round(img.naturalWidth*sc);c.height=Math.round(img.naturalHeight*sc);
+        c.width=tw;c.height=th;
         const ctx=c.getContext('2d');
-        ctx.drawImage(img,0,0,c.width,c.height);
+        ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+        ctx.drawImage(src,0,0,sw,sh,0,0,tw,th);
         const pd=n=>String(n).padStart(2,'0');
         const txt=`DOCA ${dock}  •  ${pd(when.getDate())}/${pd(when.getMonth()+1)}/${when.getFullYear()} ${pd(when.getHours())}:${pd(when.getMinutes())}`;
         const fs=Math.max(14,Math.round(Math.min(c.width,c.height)*0.026));
@@ -1094,7 +1107,7 @@ function stampPhoto(file,dock,when){
         ctx.fillStyle='rgba(255,255,255,.92)';
         ctx.fillText(txt,x,y);
         URL.revokeObjectURL(url);
-        c.toBlob(b=>resolve(b?new File([b],file.name||'foto.jpg',{type:'image/jpeg'}):file),'image/jpeg',.85);
+        c.toBlob(b=>resolve(b?new File([b],file.name||'foto.jpg',{type:'image/jpeg'}):file),'image/jpeg',.92);
       }catch(e){URL.revokeObjectURL(url);resolve(file);}
     };
     img.onerror=()=>{URL.revokeObjectURL(url);resolve(file);};
