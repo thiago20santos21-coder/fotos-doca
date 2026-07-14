@@ -223,6 +223,9 @@ body{padding-bottom:64px}
 .qc-enviar{background:linear-gradient(135deg,var(--ok),var(--ok-d));color:#fff;border:none;padding:13px 18px;border-radius:10px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:inherit;flex-shrink:0}
 .qc-enviar:disabled{opacity:.6}
 .qc-x{background:#eee;color:#666;border:none;width:40px;height:40px;border-radius:50%;font-size:15px;cursor:pointer;flex-shrink:0}
+.qc-home{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;color:#fff;text-align:center;padding:24px;background:radial-gradient(circle at 50% 30%,#1c2a4a,#000)}
+.qc-home p{font-size:1.05rem;font-weight:600;line-height:1.4}
+.qc-home small{color:rgba(255,255,255,.55);font-size:.78rem;line-height:1.5}
 
 @media(max-width:767px){
   .main{padding:8px;gap:10px;width:100%}
@@ -488,20 +491,16 @@ body{padding-bottom:64px}
 
 <!-- ABA CAMERA RAPIDA -->
 <div class="qc" id="qcView">
-  <video id="qcVideo" autoplay playsinline muted></video>
-  <p class="qc-msg" id="qcMsg" style="display:none">Câmera indisponível.<br>Verifique as permissões do navegador.</p>
-  <button class="qc-flash" id="qcFlash" style="display:none" title="Flash">⚡</button>
-  <div class="qc-zoom" id="qcZoomWrap">
-    <button class="zoom-btn" id="qcZoomOut">−</button>
-    <input class="zoom-slider" type="range" id="qcZoomSlider" min="1" max="5" step="0.1" value="1">
-    <button class="zoom-btn" id="qcZoomIn">+</button>
-    <span class="zoom-lbl" id="qcZoomLbl">1×</span>
-  </div>
-  <div class="qc-ctrls" id="qcCtrls">
-    <div class="qc-sp"></div>
+  <div class="qc-home">
+    <svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.85)" stroke-width="1.6" stroke-linecap="round">
+      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+      <circle cx="12" cy="13" r="4"/>
+    </svg>
+    <p>Toque no botão para abrir<br>a câmera do celular</p>
     <button class="shutter" id="qcShutter"><span class="shutter-in"></span></button>
-    <button class="qc-flip" id="qcFlip">🔄</button>
+    <small>A foto usa a câmera padrão do aparelho,<br>com foco automático e qualidade total</small>
   </div>
+  <input type="file" id="qcCapInput" accept="image/*" capture="environment" style="display:none">
   <div class="qc-send" id="qcSendBar">
     <img id="qcThumb" alt="Foto">
     <input id="qcDock" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="Nº da doca" autocomplete="off" enterkeyhint="send">
@@ -1078,10 +1077,11 @@ function stampPhoto(file,dock,when){
     const url=URL.createObjectURL(file);
     img.onload=()=>{
       try{
+        const sc=Math.min(1,1920/Math.max(img.naturalWidth,img.naturalHeight));
         const c=document.createElement('canvas');
-        c.width=img.naturalWidth;c.height=img.naturalHeight;
+        c.width=Math.round(img.naturalWidth*sc);c.height=Math.round(img.naturalHeight*sc);
         const ctx=c.getContext('2d');
-        ctx.drawImage(img,0,0);
+        ctx.drawImage(img,0,0,c.width,c.height);
         const pd=n=>String(n).padStart(2,'0');
         const txt=`DOCA ${dock}  •  ${pd(when.getDate())}/${pd(when.getMonth()+1)}/${when.getFullYear()} ${pd(when.getHours())}:${pd(when.getMinutes())}`;
         const fs=Math.max(14,Math.round(Math.min(c.width,c.height)*0.026));
@@ -1191,95 +1191,38 @@ fsv.addEventListener('mousedown',e=>{if(fz>1)fMDown={x:e.clientX,y:e.clientY};})
 fsv.addEventListener('mousemove',e=>{if(fMDown){fx+=e.clientX-fMDown.x;fy+=e.clientY-fMDown.y;fMDown={x:e.clientX,y:e.clientY};fsvApply();}});
 window.addEventListener('mouseup',()=>fMDown=null);
 
-// ── Abas + Câmera rápida ─────────────────────────────
-const qcView=$('qcView'),qcVideo=$('qcVideo'),qcMsg=$('qcMsg');
-const qcShutter=$('qcShutter'),qcFlip=$('qcFlip');
+// ── Abas + Câmera nativa (app padrão do celular) ─────
+const qcView=$('qcView');
+const qcShutter=$('qcShutter'),qcCapInput=$('qcCapInput');
 const qcSendBar=$('qcSendBar'),qcThumb=$('qcThumb'),qcDock=$('qcDock'),qcEnviar=$('qcEnviar'),qcX=$('qcX');
 const tabCam=$('tabCam'),tabFotos=$('tabFotos');
-let qcStream=null,qcFacing='environment',qcFile=null,qcBusy=false;
-const qcFlash=$('qcFlash');
-const qcZoomSlider=$('qcZoomSlider'),qcZoomLbl=$('qcZoomLbl'),qcZoomOut=$('qcZoomOut'),qcZoomIn=$('qcZoomIn');
-let qcZoom=1,qcZoomHw=false,qcZMin=1,qcZMax=5,qcTorch=false,qcPinch0=0,qcPinchZ0=1;
-
-async function qcStart(){
-  qcStop();
-  try{
-    try{qcStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:qcFacing,width:{ideal:1920},height:{ideal:1080}},audio:false});}
-    catch{qcStream=await navigator.mediaDevices.getUserMedia({video:true,audio:false});}
-    qcVideo.srcObject=qcStream;
-    qcMsg.style.display='none';
-    // zoom (usa o da lente se o aparelho tiver, senão zoom digital)
-    const track=qcStream.getVideoTracks()[0];
-    const caps=track.getCapabilities?.()||{};
-    if(caps.zoom){qcZoomHw=true;qcZMin=caps.zoom.min;qcZMax=caps.zoom.max;qcZoomSlider.step=caps.zoom.step||0.1;}
-    else{qcZoomHw=false;qcZMin=1;qcZMax=5;qcZoomSlider.step=0.1;}
-    qcZoomSlider.min=qcZMin;qcZoomSlider.max=qcZMax;
-    qcApplyZoom(qcZMin);
-    // flash (lanterna) so aparece se o aparelho suportar
-    qcTorch=false;qcFlash.classList.remove('on');
-    qcFlash.style.display=caps.torch?'flex':'none';
-  }catch(e){qcMsg.style.display='flex';}
-}
-function qcApplyZoom(z){
-  qcZoom=Math.max(qcZMin,Math.min(qcZMax,+z||1));
-  qcZoomSlider.value=qcZoom;
-  qcZoomLbl.textContent=qcZoom.toFixed(1).replace(/\.0$/,'')+'×';
-  const flip=qcFacing==='user'?' scaleX(-1)':'';
-  if(qcZoomHw){
-    qcStream?.getVideoTracks()[0]?.applyConstraints({advanced:[{zoom:qcZoom}]});
-    qcVideo.style.transform=flip||'none';
-  }else{
-    qcVideo.style.transform=`scale(${qcZoom})`+flip;
-  }
-}
-qcZoomSlider.addEventListener('input',()=>qcApplyZoom(qcZoomSlider.value));
-qcZoomOut.addEventListener('click',()=>qcApplyZoom(qcZoom-(qcZMax-qcZMin)/10));
-qcZoomIn.addEventListener('click',()=>qcApplyZoom(qcZoom+(qcZMax-qcZMin)/10));
-qcVideo.addEventListener('touchstart',e=>{if(e.touches.length===2){e.preventDefault();qcPinch0=Math.hypot(e.touches[1].clientX-e.touches[0].clientX,e.touches[1].clientY-e.touches[0].clientY);qcPinchZ0=qcZoom;}},{passive:false});
-qcVideo.addEventListener('touchmove',e=>{if(e.touches.length===2){e.preventDefault();const d=Math.hypot(e.touches[1].clientX-e.touches[0].clientX,e.touches[1].clientY-e.touches[0].clientY);qcApplyZoom(qcPinchZ0*d/qcPinch0);}},{passive:false});
-qcVideo.addEventListener('wheel',e=>{e.preventDefault();qcApplyZoom(qcZoom+(e.deltaY<0?0.2:-0.2));},{passive:false});
-qcFlash.addEventListener('click',async()=>{
-  const track=qcStream?.getVideoTracks()[0]; if(!track)return;
-  qcTorch=!qcTorch;
-  try{await track.applyConstraints({advanced:[{torch:qcTorch}]});qcFlash.classList.toggle('on',qcTorch);}
-  catch(e){qcTorch=false;qcFlash.classList.remove('on');toast2('Flash não suportado neste aparelho.','err');}
-});
-
-function qcStop(){qcStream?.getTracks().forEach(t=>t.stop());qcStream=null;qcVideo.srcObject=null;}
+let qcFile=null,qcBusy=false;
 
 function showTab(t){
   if(t==='cam'){
     qcView.classList.add('active');tabCam.classList.add('active');tabFotos.classList.remove('active');
     document.body.style.overflow='hidden';
-    if(!qcStream)qcStart();
   }else{
     qcView.classList.remove('active');tabFotos.classList.add('active');tabCam.classList.remove('active');
     document.body.style.overflow='';
-    qcStop();qcHideSend();
+    qcHideSend();
   }
 }
 tabCam.addEventListener('click',()=>showTab('cam'));
 tabFotos.addEventListener('click',()=>showTab('fotos'));
-qcFlip.addEventListener('click',async()=>{qcFacing=qcFacing==='environment'?'user':'environment';await qcStart();});
 
-qcShutter.addEventListener('click',()=>{
-  if(!qcVideo.videoWidth)return;
-  const c=document.createElement('canvas');
-  c.width=qcVideo.videoWidth;c.height=qcVideo.videoHeight;
-  const ctx=c.getContext('2d');
-  if(qcFacing==='user'){ctx.translate(c.width,0);ctx.scale(-1,1);}
-  if(!qcZoomHw&&qcZoom>1){
-    const sw=c.width/qcZoom,sh=c.height/qcZoom;
-    ctx.drawImage(qcVideo,(c.width-sw)/2,(c.height-sh)/2,sw,sh,0,0,c.width,c.height);
-  }else{
-    ctx.drawImage(qcVideo,0,0);
-  }
-  qcThumb.src=c.toDataURL('image/jpeg',.55);
-  qcFile=null;
-  c.toBlob(b=>{qcFile=new File([b],'camera.jpg',{type:'image/jpeg'});},'image/jpeg',.85);
-  qcSendBar.classList.add('show');
-  qcDock.value='';
-  qcDock.focus(); // abre o teclado na hora
+qcShutter.addEventListener('click',()=>qcCapInput.click());
+qcCapInput.addEventListener('change',e=>{
+  const f=e.target.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    qcThumb.src=ev.target.result;
+    qcFile=f;
+    qcSendBar.classList.add('show');
+    qcDock.value='';
+    setTimeout(()=>qcDock.focus(),150); // abre o teclado
+  };
+  r.readAsDataURL(f); e.target.value='';
 });
 function qcHideSend(){qcSendBar.classList.remove('show');qcFile=null;qcDock.blur();}
 qcX.addEventListener('click',qcHideSend);
@@ -1295,7 +1238,7 @@ qcEnviar.addEventListener('click',async()=>{
   const stamp=`${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
   const fileName=`DOCA-${dock}_${stamp}.jpg`;
   const file=qcFile;
-  qcHideSend(); // volta direto para a câmera, que continua ativa
+  qcHideSend(); // ja libera para a proxima foto
   let upFile=file;
   try{upFile=await stampPhoto(file,dock,now);}catch(e){}
   let ok=false;
