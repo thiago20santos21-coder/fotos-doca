@@ -1055,8 +1055,12 @@ function toast2(msg,type='info'){
 }
 
 // ── Apagar tudo ──────────────────────────────────────
+const DEL_PIN='2232';
 delAllBtn.addEventListener('click',()=>{
   if(!allPhotos.length)return;
+  const pin=prompt('🔒 Digite a senha para apagar todas as fotos:');
+  if(pin===null)return;
+  if(pin.trim()!==DEL_PIN){toast2('Senha incorreta!','err');return;}
   showConfirm('Apagar todas as fotos?',`Apagar todas as ${allPhotos.length} foto${allPhotos.length!==1?'s':''}? Essa ação não pode ser desfeita.`,async()=>{
     delAllBtn.disabled=true;
     try{
